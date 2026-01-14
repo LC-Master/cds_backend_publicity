@@ -13,6 +13,14 @@ datasource db {
   provider = "sqlserver"
 }
 
+model SyncHistory {
+  id          String   @id @default(uuid())
+  version     String
+  generatedAt DateTime
+  syncedAt    DateTime @default(now())
+  success     Boolean
+}
+
 model Campaign {
   id         String   @id @default(uuid())
   title      String?
