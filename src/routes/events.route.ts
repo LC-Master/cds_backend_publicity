@@ -3,12 +3,7 @@ import sse from "../lib/sse";
 import ms from "ms";
 import { syncEventInstance } from "../event/syncEvent";
 
-export const eventsRoute = new Elysia().get("events", ({ headers }) => {
-  headers = {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    Connection: "keep-alive",
-  };
+export const eventsRoute = new Elysia().get("events", () => {
   let cleanup: () => void;
   const stream = new ReadableStream({
     start(controller) {
@@ -17,7 +12,7 @@ export const eventsRoute = new Elysia().get("events", ({ headers }) => {
           data: { message: "ping" },
           controller,
         });
-      }, ms("30s"));
+      }, ms("25s"));
       const onSync = () => {
         sse({
           event: "dto:updated",
@@ -37,5 +32,11 @@ export const eventsRoute = new Elysia().get("events", ({ headers }) => {
     },
   });
 
-  return new Response(stream);
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
+  });
 });

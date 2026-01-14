@@ -12,7 +12,7 @@ const app = new Elysia({ prefix: "/api" })
   .use(
     cors({
       origin: Bun.env.SERVER_NEXT_PUBLIC_PRICE_CHECKER_URL,
-      methods: ["GET"],
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     })
   )
   .use(logMiddleware)

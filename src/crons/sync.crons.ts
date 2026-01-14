@@ -1,6 +1,7 @@
 import Elysia from "elysia";
 import cron from "@elysiajs/cron";
 import { prisma } from "../providers/prisma";
+import { syncEventInstance } from "../event/syncEvent";
 
 export const syncCrons = new Elysia()
   .use(
@@ -27,9 +28,10 @@ export const syncCrons = new Elysia()
   .use(
     cron({
       name: "Task every minute",
-      pattern: "* * * * *",
+      pattern: "*/1 * * * *",
       run: async () => {
-        console.log(await prisma.campaign.count(), "campaigns in database");
+        console.log("Running DB cleanup task at", new Date().toLocaleString());
+        syncEventInstance.emit("dto:updated", false);
       },
     })
   );
