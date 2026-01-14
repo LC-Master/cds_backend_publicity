@@ -11,7 +11,9 @@
     "@elysiajs/cron": "^1.4.1",
     "@elysiajs/jwt": "^1.4.0",
     "@elysiajs/static": "^1.4.7",
+    "@prisma/adapter-mssql": "^7.2.0",
     "@prisma/client": "^7.2.0",
+    "@types/mssql": "^9.1.8",
     "elysia": "latest"
   },
   "devDependencies": {

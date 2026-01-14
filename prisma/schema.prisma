@@ -12,3 +12,43 @@ generator client {
 datasource db {
   provider = "sqlserver"
 }
+
+model Campaign {
+  id         String   @id @default(uuid())
+  title      String?
+  department String?
+  agreement  String?
+  copy       String?
+  status     String
+  start_at   DateTime
+  end_at     DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  media CampaignMedia[]
+}
+
+model Media {
+  id              String   @id @default(uuid())
+  filename        String
+  durationSeconds Int?
+  local_path      String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  campaigns CampaignMedia[]
+}
+
+model CampaignMedia {
+  id         String   @id @default(uuid())
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+  campaignId String
+  media      Media    @relation(fields: [mediaId], references: [id])
+  mediaId    String
+  slot       String
+  position   Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([campaignId, mediaId, slot])
+}

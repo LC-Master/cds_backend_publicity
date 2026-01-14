@@ -1,5 +1,6 @@
 import Elysia from "elysia";
 import cron from "@elysiajs/cron";
+import { prisma } from "../providers/prisma";
 
 export const syncCrons = new Elysia()
   .use(
@@ -25,13 +26,10 @@ export const syncCrons = new Elysia()
   )
   .use(
     cron({
-      name: "Synchronous task every second",
-      pattern: "*/1 * * * * *",
-      run: () => {
-        console.log(
-          "Synchronous task executed at",
-          new Date().toLocaleString()
-        );
+      name: "Task every minute",
+      pattern: "* * * * *",
+      run: async () => {
+        console.log(await prisma.campaign.count(), "campaigns in database");
       },
     })
   );
