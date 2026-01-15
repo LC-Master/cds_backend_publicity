@@ -13,50 +13,18 @@ datasource db {
   provider = "sqlserver"
 }
 
-model SyncHistory {
-  id          String   @id @default(uuid())
-  version     String
-  generatedAt DateTime
-  syncedAt    DateTime @default(now())
-  success     Boolean
-}
-
-model Campaign {
-  id         String   @id @default(uuid())
-  title      String?
-  department String?
-  agreement  String?
-  copy       String?
-  status     String
-  start_at   DateTime
-  end_at     DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  media CampaignMedia[]
+model PlaylistData {
+  id        Int      @id @default(1)
+  version   String   @unique
+  rawJson   String
+  updatedAt DateTime @updatedAt
 }
 
 model Media {
-  id              String   @id @default(uuid())
-  filename        String
-  durationSeconds Int?
-  local_path      String
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  campaigns CampaignMedia[]
-}
-
-model CampaignMedia {
-  id         String   @id @default(uuid())
-  campaign   Campaign @relation(fields: [campaignId], references: [id])
-  campaignId String
-  media      Media    @relation(fields: [mediaId], references: [id])
-  mediaId    String
-  slot       String
-  position   Int
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@unique([campaignId, mediaId, slot])
+  id           String   @id @default(uuid())
+  filename     String   @unique
+  checksum     String
+  isDownloaded Boolean  @default(false)
+  localPath    String
+  updatedAt    DateTime @updatedAt
 }
