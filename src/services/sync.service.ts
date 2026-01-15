@@ -1,6 +1,7 @@
 import { ISnapshotDto } from "../../types/dto.type";
 import { syncStateEnum } from "../enums/syncState.enum";
 import { fetchDto } from "../providers/fetchDto";
+import { logger } from "../providers/logger.provider";
 import { prisma } from "../providers/prisma";
 import { MediaRepository } from "../repository/media.repository";
 import { PlaylistDataRepository } from "../repository/playlistData.repository";
@@ -75,11 +76,12 @@ export abstract class SyncService {
   static async syncData() {
     const dto = await fetchDto<ISnapshotDto>(Bun.env.CMS_ROUTE_SNAPSHOT);
     if (!dto) {
+      logger.warn("Failed to fetch DTO from CMS.");
       throw new Error("Failed to fetch DTO");
     }
     const canSync = await this.tryStartSync(dto.meta.version);
     if (!canSync) {
-      console.log("Sync skipped (running or no changes)");
+      logger.info("Sync already in progress or up-to-date. Skipping.");
       return dto;
     }
     try {
@@ -91,13 +93,14 @@ export abstract class SyncService {
       const files = await StorageService.downloadAndVerifyFiles(syncedFiles);
       const savedFiles = await MediaRepository.saveMany(files);
 
-      console.log(
-        `Downloaded and saved ${savedFiles.length} new media files out of ${syncedFiles.length} attempted.`
+      logger.info(
+        `Sync completed: ${savedFiles.length} media files processed.`
       );
 
       PlaylistDataRepository.saveVersion(dto);
       await this.finishSync(dto.meta.version);
     } catch (err: { message: string } | any) {
+      logger.error(`Sync failed: ${err.message}`);
       await this.finishSync(dto.meta.version, err.message);
       throw err;
     } finally {

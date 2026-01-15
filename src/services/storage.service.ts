@@ -5,6 +5,7 @@ import { IFile, IMediaFile } from "../../types/file.type";
 import { mediaStatusEnum } from "../enums/mediaStatus.enum";
 import { MediaRepository } from "../repository/media.repository";
 import fileStreamProvider from "../providers/fileStream.provider";
+import { logger } from "../providers/logger.provider";
 
 export abstract class StorageService {
   public static async cleanTempFolder() {
@@ -12,7 +13,7 @@ export abstract class StorageService {
 
     if (!(await Bun.file(tempPath).exists())) {
       await fs.mkdir(tempPath, { recursive: true });
-      console.log("Temp folder created.");
+      logger.info("Temp folder created.");
       return;
     }
 
@@ -22,9 +23,9 @@ export abstract class StorageService {
         const filePath = path.join(tempPath, file);
         await Bun.file(filePath).delete();
       }
-      console.log("Temp folder cleaned successfully.");
+      logger.info("Temp folder cleaned successfully.");
     } catch (err) {
-      console.error("Error cleaning temp folder:", err);
+      logger.error(`Error cleaning temp folder: ${err}`);
     }
   }
   public static async filesExist(files: IFile[]) {
@@ -61,7 +62,7 @@ export abstract class StorageService {
     const computedChecksum = Bun.MD5.hash(arrayBuffer, "hex");
     const isValid = computedChecksum === file.checksum;
     if (!isValid) {
-      console.warn("Checksum mismatch for file:", file.id);
+      logger.warn("Checksum mismatch for file:" + file.id);
       await bunFile.delete();
     }
     return isValid;
@@ -99,7 +100,7 @@ export abstract class StorageService {
         isDownloaded: true,
       };
     } catch (error) {
-      console.error(`Error processing file ID ${file.id}:`, error);
+      logger.error(`Error processing file ID ${file.id}: ${error}`);
       return mediaError;
     }
   }
@@ -127,7 +128,7 @@ export abstract class StorageService {
       if (failedMedia.length === 0)
         throw new Error("No failed downloads to retry.");
 
-      console.log(`[Retry] Reintentando ${failedMedia.length} archivos...`);
+      logger.info(`Retrying ${failedMedia.length} failed downloads.`);
 
       const toDownload: IFile[] = failedMedia.map((m) => ({
         id: m.id,
@@ -138,7 +139,11 @@ export abstract class StorageService {
       const results = await this.downloadAndVerifyFiles(toDownload);
       await MediaRepository.saveMany(results);
     } catch (err) {
-      console.error("Error retrying failed downloads:", err);
+      logger.error(`Error retrying failed downloads: ${err}`);
     }
   }
+  static createLogDirIfNotExists = async () => {
+    const logDir = path.join(process.cwd(), "logs");
+    await fs.mkdir(logDir, { recursive: true });
+  };
 }

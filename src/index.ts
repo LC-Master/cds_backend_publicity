@@ -6,6 +6,8 @@ import { testRoute } from "./routes/test.route";
 import cors from "@elysiajs/cors";
 import { eventsRoute } from "./routes/events.route";
 import { mediaRoute } from "./routes/media.route";
+import path from "path/win32";
+import { StorageService } from "./services/storage.service";
 
 const PORT = Number(Bun.env.PORT) || 3000;
 
@@ -23,7 +25,8 @@ const app = new Elysia({ prefix: "/api" })
   .use(syncCrons)
   .use(healthRoute);
 
-app.listen({ port: PORT }, (server) => {
+app.listen({ port: PORT }, async (server) => {
+  await StorageService.createLogDirIfNotExists();
   console.log(`🦊 Elysia is running at ${server.hostname}:${server.port}`);
 });
 
