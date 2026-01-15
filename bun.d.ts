@@ -12,5 +12,6 @@ declare module "bun" {
     SERVER_NEXT_PUBLIC_PRICE_CHECKER_URL: string;
     DB_HOST: string;
     DB_PORT: string;
+    SYNC_TTL_HOURS: number;
   }
 }
