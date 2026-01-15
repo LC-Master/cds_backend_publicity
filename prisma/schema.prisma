@@ -16,7 +16,7 @@ datasource db {
 model PlaylistData {
   id        Int      @id @default(1)
   version   String   @unique
-  rawJson   String
+  rawJson   String   @db.NVarChar(Max)
   updatedAt DateTime @updatedAt
 }
 
@@ -24,7 +24,11 @@ model Media {
   id           String   @id @default(uuid())
   filename     String   @unique
   checksum     String
+  errorCount   Int      @default(0)
+  status       String   @default("pending")
   isDownloaded Boolean  @default(false)
-  localPath    String
+  localPath    String   @db.NVarChar(Max)
   updatedAt    DateTime @updatedAt
+
+  @@index([id, filename])
 }
