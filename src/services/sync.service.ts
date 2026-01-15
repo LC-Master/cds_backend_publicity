@@ -5,6 +5,11 @@ import { fetchDto } from "../providers/fetchDto";
 import fileStreamProvider from "../providers/fileStream.provider";
 import { prisma } from "../providers/prisma";
 import fs from "fs/promises";
+import { mediaStatusEnum } from "../enums/mediaStatus.enum";
+import { MediaRepository } from "../repository/media.repository";
+import { PlaylistDataRepository } from "../repository/playlistData.repository";
+
+
 export abstract class SyncService {
   static async isNewVersion(inComingVersion: string) {
     const current = await prisma.playlistData.findUnique({
@@ -12,7 +17,8 @@ export abstract class SyncService {
     });
     return !current || current.version !== inComingVersion;
   }
-  private static async syncFiles(files: IFile[]) {
+  public static async retryFailedDownloads() {}
+  private static async filesExist(files: IFile[]) {
     const existingFiles = await prisma.media.findMany({
       where: {
         OR: files.map((file) => ({
@@ -57,39 +63,51 @@ export abstract class SyncService {
       yield arr.slice(i, i + size);
     }
   }
+  private static async processFile(file: IFile): Promise<IMediaFile> {
+    const name = file.id + path.extname(file.name);
+    const stagePath = path.join(process.cwd(), "Media", "temp", name);
+    const localPath = path.join(process.cwd(), "Media", name);
+    const mediaError: IMediaFile = {
+      id: file.id,
+      filename: file.name,
+      status: mediaStatusEnum.ERROR,
+      localPath: localPath,
+      checksum: file.checksum,
+      isDownloaded: false,
+    };
 
-  private static async downloadAndRegistreFiles(files: IFile[]) {
-    const chunks = this.getChunks(files, 10);
-    for (const chunk of chunks) {
-      const downloadPromises = chunk.map(async (file) => {
-        const res = await fileStreamProvider(file.id);
-        const name = file.id + path.extname(file.name);
-        const stagePath = path.join(process.cwd(), "Media", "temp", name);
-        const localPath = path.join(process.cwd(), "Media", name);
-        await Bun.write(stagePath, res);
-        const isValid = await this.verifyChecksum(file, stagePath);
+    try {
+      const res = await fileStreamProvider(file.id);
+      await Bun.write(stagePath, res);
+      const isValid = await this.verifyChecksum(file, stagePath);
 
-        if (!isValid) return null;
+      if (!isValid) return mediaError;
 
-        await this.moveFile(stagePath, localPath);
+      await this.moveFile(stagePath, localPath);
 
-        return {
-          id: file.id,
-          filename: file.name,
-          localPath: localPath,
-          updatedAt: new Date().toISOString(),
-          checksum: file.checksum,
-          isDownloaded: true,
-        };
-      });
-      const files = await Promise.all(downloadPromises);
-      console.log("Downloaded files:", files);
-
-      //   await MediaRepository.saveMany(
-      //     files.filter((file): file is IMediaFile => file !== null)
-      //   );
+      return {
+        ...mediaError,
+        status: mediaStatusEnum.DOWNLOADED,
+        isDownloaded: true,
+      };
+    } catch (error) {
+      console.error(`Error processing file ID ${file.id}:`, error);
+      return mediaError;
     }
   }
+
+  public static async downloadAndVerifyFiles(files: IFile[]) {
+    const chunks = this.getChunks(files, 10);
+    let results: IMediaFile[] = [];
+    for (const chunk of chunks) {
+      const chunkResults = await Promise.all(
+        chunk.map((file) => this.processFile(file))
+      );
+      results.push(...chunkResults);
+    }
+    return results;
+  }
+
   static async syncData() {
     const dto = await fetchDto<ISnapshotDto>(Bun.env.CMS_ROUTE_SNAPSHOT);
 
@@ -105,41 +123,16 @@ export abstract class SyncService {
       .map((campaign) => [...campaign.slots.am, ...campaign.slots.pm])
       .flat();
 
-    await this.syncFiles(mediaList);
-    await this.downloadAndRegistreFiles(mediaList);
+    const syncedFiles = await this.filesExist(mediaList);
+    const files = await this.downloadAndVerifyFiles(syncedFiles);
+    const savedFiles = await MediaRepository.saveMany(files);
+
+    console.log(
+      `Downloaded and saved ${savedFiles.length} new media files out of ${syncedFiles.length} attempted.`
+    );
+
     PlaylistDataRepository.saveVersion(dto);
 
-    return [dto, isNew];
-  }
-}
-export abstract class PlaylistDataRepository {
-  static async saveVersion(dto: ISnapshotDto) {
-    const result = await prisma.playlistData.upsert({
-      update: {
-        version: dto.meta.version,
-        rawJson: JSON.stringify(dto),
-      },
-      create: {
-        id: 1,
-        rawJson: JSON.stringify(dto),
-        version: dto.meta.version,
-      },
-      where: { id: 1 },
-    });
-    return result;
-  }
-}
-export abstract class MediaRepository {
-  static async save(file: IMediaFile) {
-    const result = await prisma.media.create({
-      data: file,
-    });
-    return result;
-  }
-  static async saveMany(files: IMediaFile[]) {
-    const result = await prisma.media.createMany({
-      data: files,
-    });
-    return result;
+    return dto;
   }
 }

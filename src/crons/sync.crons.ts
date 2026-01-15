@@ -1,8 +1,8 @@
 import Elysia from "elysia";
 import cron from "@elysiajs/cron";
-import { prisma } from "../providers/prisma";
 import { syncEventInstance } from "../event/syncEvent";
-
+import { StorageService } from "../services/storage.service";
+let isRetrying = false;
 export const syncCrons = new Elysia()
   .use(
     cron({
@@ -32,6 +32,21 @@ export const syncCrons = new Elysia()
       run: async () => {
         console.log("Running DB cleanup task at", new Date().toLocaleString());
         syncEventInstance.emit("dto:updated", false);
+      },
+    })
+  )
+  .use(
+    cron({
+      name: "Retry_failed_downloads_every_hour",
+      pattern: "0 * * * *",
+      run: async () => {
+        if (isRetrying) return;
+        isRetrying = true;
+        try {
+          await StorageService.retryFailedDownloads();
+        } finally {
+          isRetrying = false;
+        }
       },
     })
   );

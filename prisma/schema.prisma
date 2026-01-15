@@ -24,7 +24,7 @@ model Media {
   id           String   @id @default(uuid())
   filename     String   @unique
   checksum     String
-  errorCount   Int      @default(0)
+  errorCount   Int?
   status       String   @default("pending")
   isDownloaded Boolean  @default(false)
   localPath    String   @db.NVarChar(Max)
