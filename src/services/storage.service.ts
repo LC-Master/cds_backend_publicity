@@ -15,7 +15,6 @@ export abstract class StorageService {
       logger.info("Temp folder created.");
       return;
     }
-
     try {
       const files = await fs.readdir(tempPath);
       for (const file of files) {

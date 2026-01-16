@@ -16,7 +16,6 @@ export interface Data {
 export interface Campaign {
   id: string;
   title: string;
-  status: string;
   department: string;
   agreement: string;
   start_at: string;
