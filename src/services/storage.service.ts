@@ -6,6 +6,7 @@ import { mediaStatusEnum } from "../enums/mediaStatus.enum";
 import { MediaRepository } from "../repository/media.repository";
 import fileStreamProvider from "../providers/fileStream.provider";
 import { logger } from "../providers/logger.provider";
+import { ca } from "zod/v4/locales";
 export abstract class StorageService {
   public static async cleanTempFolder() {
     const tempPath = path.join(process.cwd(), "Media", "temp");
@@ -154,7 +155,16 @@ export abstract class StorageService {
   }
   static createLogDirIfNotExists = async () => {
     const logDir = path.join(process.cwd(), "logs");
-    await fs.mkdir(logDir, { recursive: true });
+    try {
+      if (!(await this.pathExists(logDir))) {
+        logger.info("Log directory does not exist. Creating...");
+        await fs.mkdir(logDir);
+      } else {
+        logger.info("Log directory already exists.");
+      }
+    } catch (err) {
+      logger.error(`Error creating log directory: ${err}`);
+    }
   };
   public static getDiskInfo() {
     try {

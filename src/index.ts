@@ -10,6 +10,11 @@ import { StorageService } from "./services/storage.service";
 import { logger } from "./providers/logger.provider";
 import { shutdown } from "./lib/shutdown";
 import { forceRoute } from "./routes/force.route";
+import { typeSyncEnum } from "./enums/typeSync.enum";
+import { syncEventInstance } from "./event/syncEvent";
+import { PlaylistService } from "./services/playlist.service";
+import { SyncService } from "./services/sync.service";
+import { playlistRoute } from "./routes/playlist.route";
 
 const PORT = Number(Bun.env.PORT) || 3000;
 
@@ -26,6 +31,7 @@ export const app = new Elysia({ prefix: "/api" })
   .use(logMiddleware)
   .use(mediaRoute)
   .use(forceRoute)
+  .use(playlistRoute)
   .use(eventsRoute)
   .use(testRoute)
   .use(syncCrons)
@@ -33,7 +39,32 @@ export const app = new Elysia({ prefix: "/api" })
 
 app.listen({ port: PORT }, async (server) => {
   await StorageService.createLogDirIfNotExists();
-  logger.info(`🦊 Elysia is running at ${server.hostname}:${server.port}`);
+
+  await StorageService.cleanTempFolder();
+
+  await StorageService.retryFailedDownloads();
+
+  try {
+    const result = await SyncService.syncData();
+    if (
+      result?.dto &&
+      (result.type === typeSyncEnum.noChange ||
+        result.type === typeSyncEnum.newSync)
+    ) {
+      await PlaylistService.generate(result.dto);
+      syncEventInstance.emit("dto:updated", true);
+    }
+  } catch (err: any) {
+    logger.error({ message: `Startup sync failed: ${err.message}` });
+  } finally {
+    logger.info({
+      message: "Startup sync finished",
+      time: new Date().toLocaleString(),
+    });
+  }
+  logger.info(
+    `Content Distribution Service (CDS) is running at ${server.hostname}:${server.port}`
+  );
 });
 
 process.on("uncaughtException", (err) => {
