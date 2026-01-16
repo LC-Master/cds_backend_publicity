@@ -22,12 +22,13 @@ export const forceRoute = new Elysia().post(
         syncEventInstance.emit("dto:updated", true);
       }
     } catch (err: any) {
-      logger.error({ message: `Sync failed: ${err.message}` });
+      logger.error({ message: `Force sync failed: ${err.message}` });
     } finally {
       logger.info({
         message: "Daily sync finished",
         time: new Date().toLocaleString(),
       });
+      return status(200, "Force sync initiated");
     }
   },
   {

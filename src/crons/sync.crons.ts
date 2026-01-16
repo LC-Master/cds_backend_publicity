@@ -30,7 +30,7 @@ export const syncCrons = new Elysia()
             syncEventInstance.emit("dto:updated", true);
           }
         } catch (err: any) {
-          logger.error({ message: `Sync failed: ${err.message}` });
+          logger.error({ message: `Sync failed (cron 5AM): ${err.message}` });
         } finally {
           logger.info({
             message: "Daily sync finished",
@@ -60,7 +60,7 @@ export const syncCrons = new Elysia()
             syncEventInstance.emit("dto:updated", true);
           }
         } catch (err: any) {
-          logger.error({ message: `Sync failed: ${err.message}` });
+          logger.error({ message: `Sync failed (cron 12PM): ${err.message}` });
         } finally {
           logger.info({
             message: "Daily sync finished",

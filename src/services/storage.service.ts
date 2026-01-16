@@ -117,6 +117,15 @@ export abstract class StorageService {
     }
     return results;
   }
+  public static async pathExists(p: string): Promise<boolean> {
+    try {
+      await fs.access(p);
+      const stats = await fs.stat(p);
+      return stats.isDirectory();
+    } catch {
+      return false;
+    }
+  }
   public static async retryFailedDownloads() {
     try {
       const failedMedia = await prisma.media.findMany({
@@ -147,7 +156,7 @@ export abstract class StorageService {
     const logDir = path.join(process.cwd(), "logs");
     await fs.mkdir(logDir, { recursive: true });
   };
-  public static  getDiskInfo() {
+  public static getDiskInfo() {
     try {
       if (process.platform === "win32") {
         const driveLetter = path.parse(process.cwd()).root.replace("\\", "");

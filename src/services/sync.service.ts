@@ -1,4 +1,3 @@
-import { t } from "elysia";
 import { ISnapshotDto } from "../../types/dto.type";
 import { syncStateEnum } from "../enums/syncState.enum";
 import { typeSyncEnum } from "../enums/typeSync.enum";
@@ -112,7 +111,7 @@ export abstract class SyncService {
       PlaylistDataRepository.saveVersion(dto);
       await this.finishSync(dto.meta.version);
     } catch (err: { message: string } | any) {
-      logger.error(`Sync failed: ${err.message}`);
+      logger.error(`Sync failed services: ${err.message}`);
       await this.finishSync(dto.meta.version, err.message);
       throw err;
     } finally {
