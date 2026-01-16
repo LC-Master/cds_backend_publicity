@@ -1,4 +1,5 @@
-import Elysia, { sse } from "elysia";
+import Elysia from "elysia";
+import sse from "../lib/sse";
 import ms from "ms";
 import { syncEventInstance } from "../event/syncEvent";
 import { logger } from "../providers/logger.provider";

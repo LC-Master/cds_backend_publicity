@@ -11,7 +11,7 @@ export abstract class StorageService {
   public static async cleanTempFolder() {
     const tempPath = path.join(process.cwd(), "Media", "temp");
 
-    if (!(await Bun.file(tempPath).exists())) {
+    if (! await this.pathExists(tempPath)) {
       await fs.mkdir(tempPath, { recursive: true });
       logger.info("Temp folder created.");
       return;

@@ -11,25 +11,28 @@ export const forceRoute = new Elysia().post(
     const { force } = body;
     logger.info({ message: "Force sync requested", force });
     if (!force) throw status(400, "Force parameter must be true");
-    try {
-      const result = await SyncService.syncData();
-      if (
-        result?.dto &&
-        (result.type === typeSyncEnum.noChange ||
-          result.type === typeSyncEnum.newSync)
-      ) {
-        await PlaylistService.generate(result.dto);
-        syncEventInstance.emit("dto:updated", true);
+    // Run sync in background
+    (async () => {
+      try {
+        const result = await SyncService.syncData();
+        if (
+          result?.dto &&
+          (result.type === typeSyncEnum.noChange ||
+            result.type === typeSyncEnum.newSync)
+        ) {
+          await PlaylistService.generate(result.dto);
+          syncEventInstance.emit("dto:updated", true);
+        }
+      } catch (err: any) {
+        logger.error({ message: `Force sync failed: ${err.message}` });
+      } finally {
+        logger.info({
+          message: "Force Sync Finished",
+          time: new Date().toLocaleString(),
+        });
       }
-    } catch (err: any) {
-      logger.error({ message: `Force sync failed: ${err.message}` });
-    } finally {
-      logger.info({
-        message: "Daily sync finished",
-        time: new Date().toLocaleString(),
-      });
-      return status(200, "Force sync initiated");
-    }
+    })();
+    return status(200, "Force sync initiated");
   },
   {
     body: t.Object({

@@ -1,0 +1,72 @@
+# Ignorar todo tipo de archivos multimedia y carpetas comunes
+
+# Imágenes
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.bmp
+*.tiff
+*.webp
+*.ico
+*.heic
+*.raw
+*.psd
+*.ai
+*.eps
+
+# Audio
+*.mp3
+*.wav
+*.flac
+*.aac
+*.ogg
+*.m4a
+*.wma
+
+# Vídeo
+*.mp4
+*.mkv
+*.mov
+*.avi
+*.wmv
+*.webm
+*.flv
+*.mpeg
+*.mpg
+
+# Fuentes
+*.ttf
+*.otf
+*.woff
+*.woff2
+*.eot
+
+# Archivos comprimidos que suelen contener media
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+*.bz2
+
+# Carpetas comunes de media / uploads / thumbnails
+/media/
+/Media/
+/uploads/
+/public/uploads/
+/assets/images/
+/static/media/
+/images/
+/audio/
+/videos/
+/sounds/
+/thumbnails/
+
+# Archivos de sistema y miniaturas
+.DS_Store
+Thumbs.db
+
+# Si necesita incluir algún archivo media en el repo, añádalo con una excepción:
+# !ruta/a/archivo.ext
