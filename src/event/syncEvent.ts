@@ -3,6 +3,8 @@ import { ISnapshotDto } from "../../types/dto.type";
 type Events = {
   "dto:fetched": ISnapshotDto;
   "dto:updated": boolean;
+  "playlist:generated": boolean;
+  heartbeat: boolean;
 };
 class syncEvent extends EventEmitter {
   emit<E extends keyof Events>(event: E, payload: Events[E]): boolean {

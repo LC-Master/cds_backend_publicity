@@ -13,10 +13,20 @@ export abstract class PlaylistService {
     );
 
     const amPlaylist = activeCampaigns.flatMap((campaign) =>
-      campaign.slots.am.map((slot) => ({ id: slot.id, name: slot.name }))
+      campaign.slots.am.map((slot) => ({
+        id: slot.id,
+        name: slot.name.split('.').pop() || 'mp4',
+        start_at: campaign.start_at,
+        end_at: campaign.end_at,
+      }))
     );
     const pmPlaylist = activeCampaigns.flatMap((campaign) =>
-      campaign.slots.pm.map((slot) => ({ id: slot.id, name: slot.name }))
+      campaign.slots.pm.map((slot) => ({
+        id: slot.id,
+        fileType: slot.name.split('.').pop() || 'mp4',
+        start_at: campaign.start_at,
+        end_at: campaign.end_at,
+      }))
     );
 
     const media = await prisma.media.findMany({

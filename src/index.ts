@@ -9,6 +9,7 @@ import { mediaRoute } from "./routes/media.route";
 import { StorageService } from "./services/storage.service";
 import { logger } from "./providers/logger.provider";
 import { shutdown } from "./lib/shutdown";
+import { forceRoute } from "./routes/force.route";
 
 const PORT = Number(Bun.env.PORT) || 3000;
 
@@ -24,6 +25,7 @@ export const app = new Elysia({ prefix: "/api" })
   )
   .use(logMiddleware)
   .use(mediaRoute)
+  .use(forceRoute)
   .use(eventsRoute)
   .use(testRoute)
   .use(syncCrons)
@@ -47,5 +49,3 @@ process.on("unhandledRejection", (reason) => {
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 
 process.on("SIGINT", () => shutdown("SIGINT"));
-
-

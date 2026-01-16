@@ -1,4 +1,5 @@
 import { IFile } from "../../types/file.type";
+import { logger } from "../providers/logger.provider";
 import { prisma } from "../providers/prisma";
 import { StorageService } from "./storage.service";
 
@@ -16,7 +17,7 @@ type IHealth = {
 };
 
 export abstract class HealthService {
-  public static async isHealthy() {
+  public static async isHealthy(): Promise<void> {
     StorageService.getDiskInfo();
 
     const media = await prisma.media.findMany({
@@ -53,7 +54,14 @@ export abstract class HealthService {
       },
     });
 
-
-    return true;
+    if (!response.ok) {
+      logger.error(
+        `Health check reporting failed with status: ${response.status}`
+      );
+    }
+    logger.info({
+        message: "Health check reported successfully",
+        time: new Date().toLocaleString(),
+    });
   }
 }
