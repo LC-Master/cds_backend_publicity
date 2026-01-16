@@ -1,5 +1,4 @@
-import Elysia from "elysia";
-import sse from "../lib/sse";
+import Elysia, { sse } from "elysia";
 import ms from "ms";
 import { syncEventInstance } from "../event/syncEvent";
 import { logger } from "../providers/logger.provider";
@@ -14,18 +13,31 @@ export const eventsRoute = new Elysia().get("events", () => {
           controller,
         });
       }, ms("25s"));
-      const onSync = () => {
+
+      const onDtoUpdated = () => {
         sse({
           event: "dto:updated",
           controller,
           data: { message: "Nuevo DTO sincronizado" },
         });
       };
+
+      const onPlaylistGenerated = () => {
+        sse({
+          event: "playlist:generated",
+          controller,
+          data: { message: "Nueva playlist generada" },
+        });
+      };
+
+      syncEventInstance.on("dto:updated", onDtoUpdated);
+      syncEventInstance.on("playlist:generated", onPlaylistGenerated);
+
       cleanup = () => {
-        syncEventInstance.off("dto:updated", onSync);
+        syncEventInstance.off("dto:updated", onDtoUpdated);
+        syncEventInstance.off("playlist:generated", onPlaylistGenerated);
         clearInterval(interval);
       };
-      syncEventInstance.on("dto:updated", onSync);
     },
     cancel() {
       logger.info("Client disconnected from SSE");
