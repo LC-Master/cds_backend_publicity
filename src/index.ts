@@ -15,6 +15,7 @@ import { syncEventInstance } from "./event/syncEvent";
 import { PlaylistService } from "./services/playlist.service";
 import { SyncService } from "./services/sync.service";
 import { playlistRoute } from "./routes/playlist.route";
+import { connectDb } from "./providers/prisma";
 
 const PORT = Number(Bun.env.PORT) || 3000;
 
@@ -38,6 +39,12 @@ export const app = new Elysia({ prefix: "/api" })
   .use(healthRoute);
 
 app.listen({ port: PORT }, async (server) => {
+  const isConnected = await connectDb();
+  if (!isConnected) {
+    logger.fatal("cannot connect to database, exiting...");
+    process.exit(1);
+  }
+
   await StorageService.createLogDirIfNotExists();
 
   await StorageService.cleanTempFolder();

@@ -108,7 +108,7 @@ export abstract class SyncService {
         `Sync completed: ${savedFiles.length} media files processed.`
       );
 
-      PlaylistDataRepository.saveVersion(dto);
+      await PlaylistDataRepository.saveVersion(dto);
       await this.finishSync(dto.meta.version);
     } catch (err: { message: string } | any) {
       logger.error(`Sync failed services: ${err.message}`);

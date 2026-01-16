@@ -6,7 +6,7 @@ import { mediaStatusEnum } from "../enums/mediaStatus.enum";
 import { MediaRepository } from "../repository/media.repository";
 import fileStreamProvider from "../providers/fileStream.provider";
 import { logger } from "../providers/logger.provider";
-import { ca } from "zod/v4/locales";
+
 export abstract class StorageService {
   public static async cleanTempFolder() {
     const tempPath = path.join(process.cwd(), "Media", "temp");

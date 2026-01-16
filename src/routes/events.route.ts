@@ -3,7 +3,7 @@ import ms from "ms";
 import { syncEventInstance } from "../event/syncEvent";
 import { logger } from "../providers/logger.provider";
 
-export const eventsRoute = new Elysia().get("events", () => {
+export const eventsRoute = new Elysia().get("/events", () => {
   let cleanup: () => void;
   const stream = new ReadableStream({
     start(controller) {

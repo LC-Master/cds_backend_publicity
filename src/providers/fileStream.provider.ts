@@ -29,8 +29,8 @@ export default async function fileStreamProvider(id: string) {
     }
 
     return res;
-  } catch (error) {
-    error === "AbortError" &&
+  } catch (error: any) {
+    error.name === "AbortError" &&
       logger.error(`[fileStreamProvider] Timeout al descargar ID ${id}`);
     logger.error({
       message: `[fileStreamProvider] Error al descargar ID ${id}: ${error}`,

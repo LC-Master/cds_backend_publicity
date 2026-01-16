@@ -47,7 +47,7 @@ export abstract class PlaylistService {
       await fs.mkdir(playlistPath);
     }
 
-    Bun.write(
+    await Bun.write(
       path.join(playlistPath, "playlist.json"),
       JSON.stringify({ am: filteredAm, pm: filteredPm }, null, 2)
     );
