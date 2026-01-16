@@ -2,6 +2,7 @@ import Elysia from "elysia";
 import cron from "@elysiajs/cron";
 import { syncEventInstance } from "../event/syncEvent";
 import { StorageService } from "../services/storage.service";
+import { logger } from "../providers/logger.provider";
 let isRetrying = false;
 export const syncCrons = new Elysia()
   .use(
@@ -10,7 +11,10 @@ export const syncCrons = new Elysia()
       pattern: "0 5 * * *",
       timezone: "America/Caracas",
       run: () => {
-        console.log("Task executed at", new Date().toLocaleString());
+        logger.info({
+          message: "Starting daily sync at",
+          time: new Date().toLocaleString(),
+        });
       },
     })
   )
@@ -19,9 +23,15 @@ export const syncCrons = new Elysia()
       name: "Async task every day at 12PM",
       pattern: "0 12 * * *",
       run: async () => {
-        console.log("Async task started at", new Date().toLocaleString());
+        logger.info({
+          message: "Starting async task at",
+          time: new Date().toLocaleString(),
+        });
         await new Promise((resolve) => setTimeout(resolve, 2000));
-        console.log("Async task finished at", new Date().toLocaleString());
+        logger.info({
+          message: "Async task finished at",
+          time: new Date().toLocaleString(),
+        });
       },
     })
   )
@@ -30,7 +40,10 @@ export const syncCrons = new Elysia()
       name: "Task every minute",
       pattern: "*/1 * * * *",
       run: async () => {
-        console.log("Running DB cleanup task at", new Date().toLocaleString());
+        logger.info({
+          message: "Running DB cleanup task at",
+          time: new Date().toLocaleString(),
+        });
         syncEventInstance.emit("dto:updated", false);
       },
     })

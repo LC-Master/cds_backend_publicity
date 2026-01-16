@@ -2,6 +2,7 @@ import Elysia from "elysia";
 import sse from "../lib/sse";
 import ms from "ms";
 import { syncEventInstance } from "../event/syncEvent";
+import { logger } from "../providers/logger.provider";
 
 export const eventsRoute = new Elysia().get("events", () => {
   let cleanup: () => void;
@@ -27,7 +28,7 @@ export const eventsRoute = new Elysia().get("events", () => {
       syncEventInstance.on("dto:updated", onSync);
     },
     cancel() {
-      console.log("Client disconnected from SSE");
+      logger.info("Client disconnected from SSE");
       cleanup();
     },
   });

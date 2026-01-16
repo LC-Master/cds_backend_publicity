@@ -6,12 +6,16 @@ import { testRoute } from "./routes/test.route";
 import cors from "@elysiajs/cors";
 import { eventsRoute } from "./routes/events.route";
 import { mediaRoute } from "./routes/media.route";
-import path from "path/win32";
 import { StorageService } from "./services/storage.service";
+import { logger } from "./providers/logger.provider";
+import { shutdown } from "./lib/shutdown";
 
 const PORT = Number(Bun.env.PORT) || 3000;
 
-const app = new Elysia({ prefix: "/api" })
+export const app = new Elysia({ prefix: "/api" })
+  .derive({ as: "global" }, () => ({
+    log: logger,
+  }))
   .use(
     cors({
       origin: Bun.env.SERVER_NEXT_PUBLIC_PRICE_CHECKER_URL,
@@ -27,7 +31,21 @@ const app = new Elysia({ prefix: "/api" })
 
 app.listen({ port: PORT }, async (server) => {
   await StorageService.createLogDirIfNotExists();
-  console.log(`🦊 Elysia is running at ${server.hostname}:${server.port}`);
+  logger.info(`🦊 Elysia is running at ${server.hostname}:${server.port}`);
 });
 
-export default app;
+process.on("uncaughtException", (err) => {
+  logger.fatal({ err }, "Uncaught Exception");
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason) => {
+  logger.fatal({ reason }, "Unhandled Promise Rejection");
+  process.exit(1);
+});
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+
+process.on("SIGINT", () => shutdown("SIGINT"));
+
+

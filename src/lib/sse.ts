@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { logger } from "../providers/logger.provider";
 
 const encoder = new TextEncoder();
 
@@ -21,7 +22,11 @@ export default function sse({
   const result = schema.safeParse({ data, controller });
 
   if (!result.success) {
-    console.error("❌ SSE Validation Failed:", result.error.format());
+    logger.error({
+      message: `[sse] Validation failed: ${JSON.stringify(
+        result.error.format()
+      )}`,
+    });
     throw new Error(
       "Invalid SSE parameters: Check data content and controller state."
     );

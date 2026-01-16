@@ -6,7 +6,6 @@ import { mediaStatusEnum } from "../enums/mediaStatus.enum";
 import { MediaRepository } from "../repository/media.repository";
 import fileStreamProvider from "../providers/fileStream.provider";
 import { logger } from "../providers/logger.provider";
-
 export abstract class StorageService {
   public static async cleanTempFolder() {
     const tempPath = path.join(process.cwd(), "Media", "temp");
@@ -106,7 +105,7 @@ export abstract class StorageService {
   }
 
   public static async downloadAndVerifyFiles(files: IFile[]) {
-    const chunks = this.getChunks(files, 10);
+    const chunks = this.getChunks(files, Number(Bun.env.DOWNLOAD_CONCURRENCY) || 5);
     let results: IMediaFile[] = [];
     for (const chunk of chunks) {
       const chunkResults = await Promise.all(

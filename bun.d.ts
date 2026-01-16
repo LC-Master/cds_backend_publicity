@@ -13,5 +13,6 @@ declare module "bun" {
     DB_HOST: string;
     DB_PORT: string;
     SYNC_TTL_HOURS: number;
+    DOWNLOAD_CONCURRENCY: number;
   }
 }

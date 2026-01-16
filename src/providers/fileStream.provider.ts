@@ -1,4 +1,5 @@
 import ms from "ms";
+import { logger } from "./logger.provider";
 
 export default async function fileStreamProvider(id: string) {
   const controller = new AbortController();
@@ -30,8 +31,10 @@ export default async function fileStreamProvider(id: string) {
     return res;
   } catch (error) {
     error === "AbortError" &&
-      console.error(`[fileStreamProvider] Timeout al descargar ID ${id}`);
-    console.error(`[fileStreamProvider] Error crítico en ID ${id}:`, error);
+      logger.error(`[fileStreamProvider] Timeout al descargar ID ${id}`);
+    logger.error({
+      message: `[fileStreamProvider] Error al descargar ID ${id}: ${error}`,
+    });
     throw error;
   }
 }

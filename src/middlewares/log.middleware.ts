@@ -1,5 +1,6 @@
 import { Elysia } from "elysia";
+import { logger } from "../providers/logger.provider";
 
 export const logMiddleware = new Elysia().onRequest(({ request }) => {
-  console.log(`[${new Date().toISOString()}] ${request.method} ${request.url}`);
+  logger.info(`[${new Date().toISOString()}] ${request.method} ${request.url}`);
 });
