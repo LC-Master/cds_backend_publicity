@@ -104,7 +104,10 @@ export abstract class StorageService {
   }
 
   public static async downloadAndVerifyFiles(files: IFile[]) {
-    const chunks = this.getChunks(files, Number(Bun.env.DOWNLOAD_CONCURRENCY) || 5);
+    const chunks = this.getChunks(
+      files,
+      Number(Bun.env.DOWNLOAD_CONCURRENCY) || 5
+    );
     let results: IMediaFile[] = [];
     for (const chunk of chunks) {
       const chunkResults = await Promise.all(
@@ -144,4 +147,45 @@ export abstract class StorageService {
     const logDir = path.join(process.cwd(), "logs");
     await fs.mkdir(logDir, { recursive: true });
   };
+  public static  getDiskInfo() {
+    try {
+      if (process.platform === "win32") {
+        const driveLetter = path.parse(process.cwd()).root.replace("\\", "");
+        const output = Bun.spawnSync([
+          "wmic",
+          "logicaldisk",
+          "where",
+          `DeviceID='${driveLetter}'`,
+          "get",
+          "Size,FreeSpace",
+          "/format:csv",
+        ]);
+        const result = new TextDecoder()
+          .decode(output.stdout)
+          .trim()
+          .split("\n")[1]
+          .split(",");
+        const free = parseInt(result[1], 10);
+        const size = parseInt(result[2], 10);
+        const used = size - free;
+        return { free, size, used };
+      } else {
+        const output = Bun.spawnSync(["df", "-k", process.cwd()]);
+        const result = new TextDecoder()
+          .decode(output.stdout)
+          .trim()
+          .split("\n")[1]
+          .split(/\s+/);
+        const size = parseInt(result[1], 10) * 1024;
+        const free = parseInt(result[3], 10) * 1024;
+        const used = size - free;
+        return { free, size, used };
+      }
+    } catch (err) {
+      if (err instanceof Error) {
+        logger.error(`Error getting disk info: ${err.message}`);
+      }
+      return { free: 0, size: 0, used: 0 };
+    }
+  }
 }

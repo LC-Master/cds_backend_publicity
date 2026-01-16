@@ -5,7 +5,7 @@ export interface ISnapshotDto {
 
 export interface Meta {
   version: string;
-  generated_at: string;
+  generated_at: Date;
 }
 
 export interface Data {
@@ -18,8 +18,8 @@ export interface Campaign {
   title: string;
   department: string;
   agreement: string;
-  start_at: string;
-  end_at: string;
+  start_at: Date;
+  end_at: Date;
   slots: Slots;
 }
 

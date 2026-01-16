@@ -1,7 +1,18 @@
+import ms, { StringValue } from "ms";
 import { dto } from "../schemas/dto.schema";
 import { logger } from "./logger.provider";
 
 export const fetchDto = async <T>(url: string): Promise<T | null> => {
+  const controller = new AbortController();
+  const timeout = ms(
+    (Bun.env.FETCH_TIMEOUT_SECONDS
+      ? `${Bun.env.FETCH_TIMEOUT_SECONDS}s`
+      : "30s") as StringValue
+  );
+
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, timeout);
   try {
     const response = await fetch(url, {
       method: "GET",
@@ -9,12 +20,14 @@ export const fetchDto = async <T>(url: string): Promise<T | null> => {
         Accept: "application/json",
         Authorization: `Bearer ${Bun.env.API_KEY_CMS}`,
       },
+      signal: controller.signal,
     });
 
     if (!response.ok) {
       logger.error({ message: `[fetchDto] HTTP error: ${response.status}` });
       return null;
     }
+
     const result = dto.safeParse(await response.json());
 
     if (!result.success) {
@@ -34,5 +47,7 @@ export const fetchDto = async <T>(url: string): Promise<T | null> => {
       message: `[fetchDto] Error fetching DTO from ${url}: ${error}`,
     });
     return null;
+  } finally {
+    clearTimeout(timeoutId);
   }
 };

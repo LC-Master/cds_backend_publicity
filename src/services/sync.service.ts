@@ -1,5 +1,7 @@
+import { t } from "elysia";
 import { ISnapshotDto } from "../../types/dto.type";
 import { syncStateEnum } from "../enums/syncState.enum";
+import { typeSyncEnum } from "../enums/typeSync.enum";
 import { fetchDto } from "../providers/fetchDto";
 import { logger } from "../providers/logger.provider";
 import { prisma } from "../providers/prisma";
@@ -10,7 +12,9 @@ import { StorageService } from "./storage.service";
 export abstract class SyncService {
   private static readonly SYNC_TTL_HOURS = Number(Bun.env.SYNC_TTL_HOURS ?? 2);
 
-  static async tryStartSync(incomingVersion: string): Promise<boolean> {
+  static async tryStartSync(
+    incomingVersion: string
+  ): Promise<{ canSync: boolean; type: typeSyncEnum }> {
     const now = new Date();
 
     return prisma.$transaction(async (tx) => {
@@ -20,11 +24,12 @@ export abstract class SyncService {
         if (row.syncing && row.syncStartedAt) {
           const diffHours =
             (now.getTime() - row.syncStartedAt.getTime()) / 1000 / 60 / 60;
-          if (diffHours < this.SYNC_TTL_HOURS) return false;
+          if (diffHours < this.SYNC_TTL_HOURS)
+            return { canSync: false, type: typeSyncEnum.Syncing };
         }
 
-        if (row.syncVersion === incomingVersion) return false;
-
+        if (row.syncVersion === incomingVersion)
+          return { canSync: false, type: typeSyncEnum.noChange };
         await tx.syncState.update({
           where: { id: 1 },
           data: {
@@ -36,7 +41,7 @@ export abstract class SyncService {
           },
         });
 
-        return true;
+        return { canSync: true, type: typeSyncEnum.newSync };
       }
 
       await tx.syncState.create({
@@ -49,7 +54,7 @@ export abstract class SyncService {
         },
       });
 
-      return true;
+      return { canSync: true, type: typeSyncEnum.newSync };
     });
   }
 
@@ -73,16 +78,23 @@ export abstract class SyncService {
       },
     });
   }
-  static async syncData() {
+  static async syncData(): Promise<{
+    dto: ISnapshotDto;
+    type: typeSyncEnum;
+  } | null> {
     const dto = await fetchDto<ISnapshotDto>(Bun.env.CMS_ROUTE_SNAPSHOT);
     if (!dto) {
       logger.warn("Failed to fetch DTO from CMS.");
       throw new Error("Failed to fetch DTO");
     }
     const canSync = await this.tryStartSync(dto.meta.version);
-    if (!canSync) {
-      logger.info("Sync already in progress or up-to-date. Skipping.");
-      return dto;
+    if (!canSync.canSync && canSync.type == typeSyncEnum.Syncing) {
+      logger.info("Sync already in progress. Aborting new sync attempt.");
+      return null;
+    }
+    if (!canSync.canSync && canSync.type == typeSyncEnum.noChange) {
+      logger.info("No changes detected in DTO version. Sync not required.");
+      return { dto, type: typeSyncEnum.noChange };
     }
     try {
       const mediaList = dto.data.campaigns
@@ -107,6 +119,6 @@ export abstract class SyncService {
       await StorageService.cleanTempFolder();
     }
 
-    return dto;
+    return { dto, type: typeSyncEnum.newSync };
   }
 }

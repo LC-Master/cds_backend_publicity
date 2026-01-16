@@ -1,9 +1,12 @@
+import { StringValue } from "ms";
+
 declare module "bun" {
   interface Env {
     DATABASE_URL: string;
     API_KEY_CMS: string;
     SECRET_KEY: string;
     PORT: number;
+    CMS_BASE_URL: string;
     CMS_MEDIA_BASE_URL: string;
     CMS_ROUTE_SNAPSHOT: string;
     DB_USER: string;
@@ -14,5 +17,6 @@ declare module "bun" {
     DB_PORT: string;
     SYNC_TTL_HOURS: number;
     DOWNLOAD_CONCURRENCY: number;
+    FETCH_TIMEOUT_SECONDS: StringValue;
   }
 }

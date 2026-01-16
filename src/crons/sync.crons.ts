@@ -3,6 +3,7 @@ import cron from "@elysiajs/cron";
 import { syncEventInstance } from "../event/syncEvent";
 import { StorageService } from "../services/storage.service";
 import { logger } from "../providers/logger.provider";
+import { SyncService } from "../services/sync.service";
 let isRetrying = false;
 export const syncCrons = new Elysia()
   .use(
@@ -27,7 +28,14 @@ export const syncCrons = new Elysia()
           message: "Starting async task at",
           time: new Date().toLocaleString(),
         });
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        const result = await SyncService.syncData();
+
+        if (result && result.type === "newSync") {
+          
+          syncEventInstance.emit("dto:updated", true);
+        }
+
         logger.info({
           message: "Async task finished at",
           time: new Date().toLocaleString(),
