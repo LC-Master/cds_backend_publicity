@@ -154,6 +154,38 @@ export abstract class StorageService {
       logger.error(`Error retrying failed downloads: ${err}`);
     }
   }
+  public static async removeOrphanMedia(activeMediaIds: string[]) {
+    try {
+      const whereClause = activeMediaIds.length
+        ? { isDownloaded: true, id: { notIn: activeMediaIds } }
+        : { isDownloaded: true };
+
+      const orphanMedia = await prisma.media.findMany({
+        where: whereClause,
+        select: { id: true, localPath: true },
+      });
+
+      if (orphanMedia.length === 0) return;
+
+      for (const media of orphanMedia) {
+        try {
+          if (media.localPath && (await Bun.file(media.localPath).exists())) {
+            await Bun.file(media.localPath).delete();
+          }
+        } catch (err) {
+          logger.error(`Error deleting file for media ${media.id}: ${err}`);
+        }
+      }
+
+      await prisma.media.deleteMany({
+        where: { id: { in: orphanMedia.map((m) => m.id) } },
+      });
+
+      logger.info(`Deleted ${orphanMedia.length} orphan media files.`);
+    } catch (err) {
+      logger.error(`Error removing orphan media: ${err}`);
+    }
+  }
   static createLogDirIfNotExists = async () => {
     const logDir = path.join(process.cwd(), "logs");
     try {

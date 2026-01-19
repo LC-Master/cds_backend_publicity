@@ -14,16 +14,22 @@ datasource db {
 }
 
 model SyncState {
-  id            Int      @id @default(1)
-  syncing       Boolean  @default(false)
+  id            Int       @id @default(1)
+  syncing       Boolean   @default(false)
   syncStartedAt DateTime?
   syncVersion   String?
-  status        String?  
+  status        String?
   errorMessage  String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
+model ApiKeY {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 
 model PlaylistData {
   id        Int      @id @default(1)

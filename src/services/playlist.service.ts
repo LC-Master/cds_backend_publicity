@@ -13,6 +13,11 @@ export abstract class PlaylistService {
       (campaign) => campaign.start_at <= now && campaign.end_at >= now
     );
 
+    const activeMediaIds = activeCampaigns
+      .map((campaign) => [...campaign.slots.am, ...campaign.slots.pm])
+      .flat()
+      .map((slot) => slot.id);
+
     const amPlaylist = activeCampaigns.flatMap((campaign) =>
       campaign.slots.am.map((slot) => ({
         id: slot.id,
@@ -40,6 +45,16 @@ export abstract class PlaylistService {
     const filteredPm = pmPlaylist.filter((item) => mediaIds.has(item.id));
 
     if (filteredAm.length === 0 && filteredPm.length === 0) {
+      if (!(await StorageService.pathExists(playlistPath))) {
+        await fs.mkdir(playlistPath);
+      }
+
+      await Bun.write(
+        path.join(playlistPath, "playlist.json"),
+        JSON.stringify({ am: [], pm: [] }, null, 2)
+      );
+      logger.info("Playlist cleared (no active campaigns).");
+      await StorageService.removeOrphanMedia(activeMediaIds);
       logger.warn("No media available for the current playlist.");
       return { am: [], pm: [] };
     }
@@ -51,6 +66,7 @@ export abstract class PlaylistService {
       path.join(playlistPath, "playlist.json"),
       JSON.stringify({ am: filteredAm, pm: filteredPm }, null, 2)
     );
+    await StorageService.removeOrphanMedia(activeMediaIds);
     logger.info("Playlist generated successfully.");
     return { am: filteredAm, pm: filteredPm };
   }
