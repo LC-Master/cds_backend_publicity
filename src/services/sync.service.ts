@@ -93,22 +93,36 @@ export abstract class SyncService {
       return null;
     }
     if (!canSync.canSync && canSync.type == typeSyncEnum.noChange) {
-      logger.info("No changes detected in DTO version. Sync not required.");
-      return { dto, type: typeSyncEnum.noChange };
+      // Check if playlist data exists; if it's missing, force a sync to recover state
+      const existingPlaylist = await prisma.playlistData.findUnique({ where: { id: 1 } });
+      if (!existingPlaylist) {
+        logger.warn("SyncState reports noChange but PlaylistData is missing. Proceeding to sync to recover missing data.");
+      } else {
+        logger.info("No changes detected in DTO version. Sync not required.");
+        return { dto, type: typeSyncEnum.noChange };
+      }
     }
+
     try {
       const mediaList = dto.data.campaigns
         .map((campaign) => [...campaign.slots.am, ...campaign.slots.pm])
         .flat();
 
+      logger.info(`Found ${mediaList.length} media entries in DTO.`);
+
       const syncedFiles = await StorageService.filesExist(mediaList);
+      logger.info(`After checking DB, ${syncedFiles.length} files need to be downloaded.`);
+
       const files = await StorageService.downloadAndVerifyFiles(syncedFiles);
+      logger.info(`Download finished: received ${files.length} file results.`);
+
       const savedFiles = await MediaRepository.saveMany(files);
 
       logger.info(
         `Sync completed: ${savedFiles.length} media files processed.`
       );
 
+      // Always save playlist DTO version even if no files were saved, to keep versioning consistent
       await PlaylistDataRepository.saveVersion(dto);
       await this.finishSync(dto.meta.version);
     } catch (err: { message: string } | any) {

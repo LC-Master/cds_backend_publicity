@@ -156,9 +156,16 @@ export abstract class StorageService {
   }
   public static async removeOrphanMedia(activeMediaIds: string[]) {
     try {
-      const whereClause = activeMediaIds.length
-        ? { isDownloaded: true, id: { notIn: activeMediaIds } }
-        : { isDownloaded: true };
+      // Do not perform orphan cleanup when no active IDs provided to avoid
+      // accidental mass-deletion when there are no active campaigns.
+      if (!activeMediaIds || activeMediaIds.length === 0) {
+        logger.info(
+          "No active media IDs provided; skipping orphan media cleanup."
+        );
+        return;
+      }
+
+      const whereClause = { isDownloaded: true, id: { notIn: activeMediaIds } };
 
       const orphanMedia = await prisma.media.findMany({
         where: whereClause,

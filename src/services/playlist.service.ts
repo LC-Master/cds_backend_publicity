@@ -54,7 +54,10 @@ export abstract class PlaylistService {
         JSON.stringify({ am: [], pm: [] }, null, 2)
       );
       logger.info("Playlist cleared (no active campaigns).");
-      await StorageService.removeOrphanMedia(activeMediaIds);
+
+      // Do not delete orphan media when there are no active campaigns; skipping
+      logger.info("Skipping orphan media cleanup because there are no active campaigns.");
+
       logger.warn("No media available for the current playlist.");
       return { am: [], pm: [] };
     }
