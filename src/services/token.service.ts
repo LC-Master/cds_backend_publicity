@@ -21,8 +21,9 @@ export default abstract class TokenService {
   }
   private static async hashToken(token: string) {
     const hashedToken = await Bun.password.hash(token, {
-      algorithm: "bcrypt",
-      cost: 12,
+      algorithm: "argon2id",
+      memoryCost: 65536,
+      timeCost: 3,
     });
 
     if (!hashedToken) throw new Error("Error hashing token");
@@ -32,14 +33,31 @@ export default abstract class TokenService {
   public static async createApiKey(jwt: jwt) {
     try {
       const token = await this.generateToken(jwt);
-      const validatedToken = await this.validateToken(token);
-      const hashedToken = await this.hashToken(validatedToken);
+
+      const validated = await this.validateToken(token);
+
+      const hashedToken = await this.hashToken(validated);
+
       const savedToken = await TokenRepository.save(hashedToken);
 
       if (!savedToken || !savedToken.key) {
         throw new Error("Error saving API key to database");
       }
-      await this.createFileToken(savedToken.key);
+
+      try {
+        await this.createFileToken(validated);
+        try {
+          const fs = await import("fs/promises");
+          await fs.chmod(this.pathFileToken, 0o600);
+        } catch (chmodErr) {
+          logger.warn(
+            `Unable to set file permissions for API key file: ${chmodErr}`
+          );
+        }
+      } catch (fileErr) {
+        logger.error(`Failed to write API key file: ${fileErr}`);
+      }
+
       logger.info(
         "API key created and saved successfully. on path " + this.pathFileToken
       );
