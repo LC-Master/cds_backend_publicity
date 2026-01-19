@@ -18,7 +18,7 @@
 # misc
 .DS_Store
 *.pem
-
+token_api.txt
 # debug
 npm-debug.log*
 yarn-debug.log*
@@ -29,7 +29,7 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
-
+api-key.txt
 # vercel
 .vercel
 
