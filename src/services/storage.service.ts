@@ -11,7 +11,7 @@ export abstract class StorageService {
   public static async cleanTempFolder() {
     const tempPath = path.join(process.cwd(), "Media", "temp");
 
-    if (! await this.pathExists(tempPath)) {
+    if (!(await this.pathExists(tempPath))) {
       await fs.mkdir(tempPath, { recursive: true });
       logger.info("Temp folder created.");
       return;
@@ -205,6 +205,31 @@ export abstract class StorageService {
         logger.error(`Error getting disk info: ${err.message}`);
       }
       return { free: 0, size: 0, used: 0 };
+    }
+  }
+  public static async clearFilesPath(filePath: string) {
+    if (!(await this.pathExists(filePath))) {
+      logger.warn(`Path does not exist: ${filePath}`);
+      return;
+    }
+    try {
+      const entries = await fs.readdir(filePath, { withFileTypes: true });
+      for (const entry of entries) {
+      const entryPath = path.join(filePath, entry.name);
+      try {
+        if (entry.isFile() || entry.isSymbolicLink()) {
+        await fs.unlink(entryPath);
+        logger.info(`Deleted file: ${entryPath}`);
+        } else {
+        logger.info(`Skipping directory: ${entryPath}`);
+        }
+      } catch (err) {
+        logger.error(`Error deleting ${entryPath}: ${err}`);
+      }
+      }
+      logger.info(`Successfully cleared files at path: ${filePath}`);
+    } catch (err) {
+      logger.error(`Error reading path ${filePath}: ${err}`);
     }
   }
 }
