@@ -1,12 +1,13 @@
 import ms, { StringValue } from "ms";
 import { dto } from "../schemas/dto.schema";
 import { logger } from "./logger.provider";
+import { CONFIG } from "@src/config/config";
 
 export const fetchDto = async <T>(url: string): Promise<T | null> => {
   const controller = new AbortController();
   const timeout = ms(
-    (Bun.env.FETCH_TIMEOUT_SECONDS
-      ? `${Bun.env.FETCH_TIMEOUT_SECONDS}s`
+    (CONFIG.FETCH_TIMEOUT_SECONDS
+      ? `${CONFIG.FETCH_TIMEOUT_SECONDS}s`
       : "30s") as StringValue
   );
 
@@ -18,7 +19,7 @@ export const fetchDto = async <T>(url: string): Promise<T | null> => {
       method: "GET",
       headers: {
         Accept: "application/json",
-        Authorization: `Bearer ${Bun.env.API_KEY_CMS}`,
+        Authorization: `Bearer ${CONFIG.API_KEY_CMS}`,
       },
       signal: controller.signal,
     });

@@ -1,3 +1,4 @@
+import { CONFIG } from "@src/config/config";
 import { IFile } from "../../types/file.type";
 import { logger } from "../providers/logger.provider";
 import { prisma } from "../providers/prisma";
@@ -47,7 +48,7 @@ export abstract class HealthService {
         mediaError: media,
       };
 
-      const response = await fetch(Bun.env.CMS_BASE_URL + "/center/health", {
+      const response = await fetch(CONFIG.CMS_BASE_URL + "/center/health", {
         method: "POST",
         body: JSON.stringify(health),
         headers: {

@@ -16,8 +16,7 @@ import { PlaylistService } from "./services/playlist.service";
 import { SyncService } from "./services/sync.service";
 import { playlistRoute } from "./routes/playlist.route";
 import { connectDb } from "./providers/prisma";
-
-const PORT = Number(Bun.env.PORT) || 3000;
+import { CONFIG } from "@config/config";  
 
 export const app = new Elysia({ prefix: "/api" })
   .derive({ as: "global" }, () => ({
@@ -25,7 +24,7 @@ export const app = new Elysia({ prefix: "/api" })
   }))
   .use(
     cors({
-      origin: Bun.env.SERVER_NEXT_PUBLIC_PRICE_CHECKER_URL,
+      origin: CONFIG.SERVER_NEXT_PUBLIC_PRICE_CHECKER_URL,
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     })
   )
@@ -38,7 +37,7 @@ export const app = new Elysia({ prefix: "/api" })
   .use(syncCrons)
   .use(healthRoute);
 
-app.listen({ port: PORT }, async (server) => {
+app.listen({ port: CONFIG.PORT }, async (server) => {
   const isConnected = await connectDb();
   if (!isConnected) {
     logger.fatal("cannot connect to database, exiting...");

@@ -1,7 +1,8 @@
+import { CONFIG } from "@src/config/config";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaMssql } from "@prisma/adapter-mssql";
 
-const { DB_NAME, DB_PASSWORD, DB_HOST, DB_PORT, DB_USER } = Bun.env;
+const { DB_NAME, DB_PASSWORD, DB_HOST, DB_PORT, DB_USER } = CONFIG;
 
 const sqlConfig = {
   user: DB_USER,

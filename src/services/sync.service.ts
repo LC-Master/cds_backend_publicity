@@ -1,3 +1,4 @@
+import { CONFIG } from "@src/config/config";
 import { ISnapshotDto } from "../../types/dto.type";
 import { syncStateEnum } from "../enums/syncState.enum";
 import { typeSyncEnum } from "../enums/typeSync.enum";
@@ -9,7 +10,7 @@ import { PlaylistDataRepository } from "../repository/playlistData.repository";
 import { StorageService } from "./storage.service";
 
 export abstract class SyncService {
-  private static readonly SYNC_TTL_HOURS = Number(Bun.env.SYNC_TTL_HOURS ?? 2);
+  private static readonly SYNC_TTL_HOURS = CONFIG.SYNC_TTL_HOURS;
 
   static async tryStartSync(
     incomingVersion: string
@@ -81,7 +82,7 @@ export abstract class SyncService {
     dto: ISnapshotDto;
     type: typeSyncEnum;
   } | null> {
-    const dto = await fetchDto<ISnapshotDto>(Bun.env.CMS_ROUTE_SNAPSHOT);
+    const dto = await fetchDto<ISnapshotDto>(CONFIG.CMS_ROUTE_SNAPSHOT);
     if (!dto) {
       logger.warn("Failed to fetch DTO from CMS.");
       throw new Error("Failed to fetch DTO");

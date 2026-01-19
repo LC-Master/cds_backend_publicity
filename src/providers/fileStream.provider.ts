@@ -1,15 +1,16 @@
 import ms from "ms";
 import { logger } from "./logger.provider";
+import { CONFIG } from "@src/config/config";
 
 export default async function fileStreamProvider(id: string) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), ms("30s"));
   try {
-    const res = await fetch(`${Bun.env.CMS_MEDIA_BASE_URL}/${id}`, {
+    const res = await fetch(`${CONFIG.CMS_MEDIA_BASE_URL}/${id}`, {
       method: "GET",
       headers: {
         Accept: "application/json, application/octet-stream",
-        Authorization: `Bearer ${Bun.env.API_KEY_CMS}`,
+        Authorization: `Bearer ${CONFIG.API_KEY_CMS}`,
         "X-Requested-With": "XMLHttpRequest",
         Connection: "keep-alive",
       },
