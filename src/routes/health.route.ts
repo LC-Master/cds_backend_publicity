@@ -15,5 +15,10 @@ export const healthRoute = new Elysia().get(
       timeStamp: t.String(),
       uptime: t.Number(),
     }),
+    detail:{
+      summary: "Health Check",
+      description: "Endpoint para verificar el estado de salud del servicio.",
+      tags: ["Health"],
+    }
   }
 );

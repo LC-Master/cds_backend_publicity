@@ -53,6 +53,7 @@ export const forceRoute = new Elysia({ prefix: "/sync" })
           description: "Error en los parámetros de la solicitud",
         }),
       },
+      summary: "Force Data Synchronization",
       detail: {
         description: "EndPoint para forzar la sincronización de datos.",
         tags: ["Synchronization"],
@@ -91,6 +92,7 @@ export const forceRoute = new Elysia({ prefix: "/sync" })
         }),
       },
       detail: {
+        summary: "Force Token Generation",
         description:
           "EndPoint para forzar la generación de un nuevo token de API.",
         tags: ["Authentication", "Token"],

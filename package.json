@@ -1,6 +1,7 @@
 {
   "name": "backend_checker",
   "version": "1.0.50",
+  "type": "module",
   "scripts": {
     "test": "bun test --coverage",
     "dev": "bun run --watch src/index.ts"

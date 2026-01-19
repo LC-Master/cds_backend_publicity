@@ -2,6 +2,7 @@ import { StringValue } from "ms";
 
 declare module "bun" {
   interface Env {
+    VERSION: string;
     DATABASE_URL: string;
     API_KEY_CMS: string;
     SECRET_KEY: string;

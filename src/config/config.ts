@@ -1,6 +1,8 @@
 import { Env } from "bun";
+import packageJson from "../../package.json";
 
 export const CONFIG: Env = {
+  VERSION: packageJson.version || "0.0.1",
   SECRET_KEY: Bun.env.SECRET_KEY || "default_secret_key",
   API_KEY_CMS: Bun.env.API_KEY_CMS || "default_api_key_cms",
   CMS_BASE_URL: Bun.env.CMS_BASE_URL || "http://localhost/api",
