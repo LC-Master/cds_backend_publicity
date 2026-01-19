@@ -2,7 +2,6 @@ import { Elysia } from "elysia";
 import { syncCrons } from "@crons/sync.crons";
 import { healthRoute } from "@routes/health.route";
 import { logMiddleware } from "@middlewares/log.middleware";
-import { testRoute } from "@routes/test.route";
 import cors from "@elysiajs/cors";
 import { eventsRoute } from "@routes/events.route";
 import { mediaRoute } from "@routes/media.route";
@@ -20,6 +19,7 @@ import { CONFIG } from "@config/config";
 import { auth } from "@plugin/auth.plugin";
 import TokenService from "@services/token.service";
 import { log } from "./plugin/log.plugin";
+import openapi, { fromTypes } from "@elysiajs/openapi";
 
 export const app = new Elysia({ prefix: "/api" })
   .use(log)
@@ -64,13 +64,21 @@ export const app = new Elysia({ prefix: "/api" })
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     })
   )
+  .use(
+    openapi({
+      references: fromTypes(
+        process.env.NODE_ENV === "production"
+          ? "dist/index.d.ts"
+          : "src/index.ts"
+      ),
+    })
+  )
   .use(logMiddleware)
   .use(healthRoute)
   .use(mediaRoute)
   .use(forceRoute)
   .use(playlistRoute)
   .use(eventsRoute)
-  .use(testRoute)
   .use(syncCrons);
 
 app.listen({ port: CONFIG.PORT }, async (server) => {

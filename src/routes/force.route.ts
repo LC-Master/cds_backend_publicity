@@ -14,7 +14,7 @@ export const forceRoute = new Elysia({ prefix: "/sync" })
     async ({ body }) => {
       const { force } = body;
       logger.info({ message: "Force sync requested", force });
-      if (!force) throw status(400, "Force parameter must be true");
+      if (!force) throw status(400, "Parámetro force debe ser true");
       // Run sync in background
       (async () => {
         try {
@@ -36,26 +36,64 @@ export const forceRoute = new Elysia({ prefix: "/sync" })
           });
         }
       })();
-      return status(200, "Force sync initiated");
+      return status(200, "Sincronización forzada iniciada");
     },
     {
       body: t.Object({
-        force: t.Boolean(),
+        force: t.Boolean({
+          error: "force debe ser un booleano",
+          description: "Indica si se debe forzar la sincronización de datos",
+        }),
       }),
+      response: {
+        200: t.String({
+          description: "Mensaje de éxito al iniciar la sincronización forzada",
+        }),
+        400: t.String({
+          description: "Error en los parámetros de la solicitud",
+        }),
+      },
+      detail: {
+        description: "EndPoint para forzar la sincronización de datos.",
+        tags: ["Synchronization"],
+      },
     }
   )
   .post(
     "/force/token",
     async ({ body, jwt }) => {
       const { generate } = body;
-      if (!generate) throw status(400, "Generate parameter must be true");
-      await TokenService.createApiKey(jwt);
-      logger.info({ message: "Force token generation requested", generate });
-      return status(200, "Force token generation initiated");
+      if (!generate) throw status(400, "Parámetro generate debe ser true");
+      try {
+        await TokenService.createApiKey(jwt);
+        logger.info({ message: "Force token generation requested", generate });
+        return status(200, "Generación de token forzada iniciada");
+      } catch (err: any) {
+        throw status(500, "Error generando el token");
+      }
     },
     {
       body: t.Object({
-        generate: t.Boolean({ error: "generate debe ser un booleano" }),
+        generate: t.Boolean({
+          error: "generate debe ser un booleano",
+          description: "Indica si se debe generar un nuevo token de API",
+        }),
       }),
+      response: {
+        200: t.String({
+          description: "Mensaje de éxito al iniciar la generación del token",
+        }),
+        400: t.String({
+          description: "Error en los parámetros de la solicitud",
+        }),
+        500: t.String({
+          description: "Error interno al generar el token",
+        }),
+      },
+      detail: {
+        description:
+          "EndPoint para forzar la generación de un nuevo token de API.",
+        tags: ["Authentication", "Token"],
+      },
     }
   );
