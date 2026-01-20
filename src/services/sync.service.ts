@@ -15,7 +15,14 @@ import { prisma } from "../providers/prisma";
 import { MediaRepository } from "../repository/media.repository";
 import { PlaylistDataRepository } from "../repository/playlistData.repository";
 import { StorageService } from "./storage.service";
-import path from "path";
+
+function extractMediaList(dto: ISnapshotDto) {
+  const mediaList = dto.data.campaigns
+    .map((campaign) => [...campaign.slots.am, ...campaign.slots.pm])
+    .flat();
+
+  return mediaList ? mediaList : undefined;
+}
 
 /**
  * @class SyncService
@@ -27,7 +34,6 @@ import path from "path";
  */
 export abstract class SyncService {
   private static readonly SYNC_TTL_HOURS = CONFIG.SYNC_TTL_HOURS;
-  private static readonly mediaPath = path.join(process.cwd(), "Media");
 
   /**
    * Intenta iniciar una sincronización en la DB, respetando TTL y versión.
@@ -38,7 +44,6 @@ export abstract class SyncService {
     incomingVersion: string
   ): Promise<{ canSync: boolean; type: typeSyncEnum }> {
     const now = new Date();
-
     return prisma.$transaction(async (tx) => {
       const row = await tx.syncState.findUnique({ where: { id: 1 } });
       const playlistData = await tx.playlistData.findUnique({
@@ -61,6 +66,7 @@ export abstract class SyncService {
           }
           return { canSync: false, type: typeSyncEnum.noChange };
         }
+        
         await tx.syncState.update({
           where: { id: 1 },
           data: {
@@ -135,9 +141,11 @@ export abstract class SyncService {
     }
 
     try {
-      const mediaList = dto.data.campaigns
-        .map((campaign) => [...campaign.slots.am, ...campaign.slots.pm])
-        .flat();
+      const mediaList = extractMediaList(dto);
+
+      if (!mediaList || mediaList.length === 0) {
+        throw new Error("DTO contains no media entries to process.");
+      }
 
       logger.info(`Found ${mediaList.length} media entries in DTO.`);
 
@@ -154,15 +162,12 @@ export abstract class SyncService {
       logger.info(
         `Sync completed: ${savedFiles.length} media files processed.`
       );
-
-      // Always save playlist DTO version even if no files were saved, to keep versioning consistent
-      await PlaylistDataRepository.saveVersion(dto);
-      await this.finishSync(dto.meta.version);
     } catch (err: { message: string } | any) {
       logger.error(`Sync failed services: ${err.message}`);
-      await this.finishSync(dto.meta.version, err.message);
-      throw err;
+      return null;
     } finally {
+      await PlaylistDataRepository.saveVersion(dto);
+      await this.finishSync(dto.meta.version);
       await StorageService.cleanTempFolder();
     }
 

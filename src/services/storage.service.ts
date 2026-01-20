@@ -20,12 +20,55 @@ import { CONFIG } from "@src/config/config";
  * @class StorageService
  */
 export abstract class StorageService {
+  public static readonly MEDIA_PATH = path.join(process.cwd(), "Media");
+  /**
+   *@description
+   * Reconciliar la integridad entre la base de datos y el sistema de archivos.
+   * Elimina registros de media en la base de datos si el archivo correspondiente no existe en disco
+   * @name reconcileMediaIntegrity
+   * @static
+   * @return {void}
+   */
+  public static async reconcileMediaIntegrity(): Promise<void> {
+    try {
+      const allDownloadedMedia = await prisma.media.findMany({
+        where: { isDownloaded: true },
+        select: { id: true, filename: true },
+      });
+
+      if (allDownloadedMedia.length === 0) return ;
+
+      const listMediaFile = (await this.listDirectory(this.MEDIA_PATH)) || [];
+
+      const idsToDelete = allDownloadedMedia
+        .filter((media) => {
+          const expectedFileName = `${media.id}${path.extname(media.filename)}`;
+          return !listMediaFile.includes(expectedFileName);
+        })
+        .map((media) => media.id);
+
+      if (idsToDelete.length > 0) {
+        await prisma.media.deleteMany({
+          where: { id: { in: idsToDelete } },
+        });
+
+        logger.info(
+          `Reconciled media: ${idsToDelete.length} records removed (missing on disk).`
+        );
+      } else {
+        logger.info("Media integrity check passed: DB and Disk are in sync.");
+      }
+    } catch (err) {
+      logger.error(`Error reconciling media integrity: ${err}`);
+    }
+  }
+
   /**
    * Verifica si un directorio existe y si está vacío.
    * @param {string} dirPath - Ruta del directorio a verificar.
    * @returns {Promise<string[] | undefined>} Lista de archivos o undefined si está vacío.
    */
-  public static async verifyDirectory(
+  public static async listDirectory(
     dirPath: string
   ): Promise<string[] | undefined> {
     try {
