@@ -6,6 +6,17 @@ import { logger } from "../providers/logger.provider";
 import { SseTokenService } from "@src/services/sse-token.service";
 import { Unauthorized } from "@src/schemas/Unauthorized.schema";
 
+/**
+ * @author Francisco A. Rojas F.
+ * @module Events Route
+ * * @description
+ * Ruta para manejar **SSE (Server-Sent Events)**.
+ * Notifica en tiempo real eventos de sincronización (DTO) y generación de playlists.
+ * * @name eventsRoute
+ * @method GET
+ * @returns {ReadableStream} Stream de texto formateado como `text/event-stream`.
+ * @example .use(eventsRoute)
+ */
 export const eventsRoute = new Elysia().get(
   "/events",
   ({ query, status }) => {
@@ -78,22 +89,6 @@ export const eventsRoute = new Elysia().get(
     }
   },
   {
-    headers: t.Object(
-      {
-        "Content-Type": t.String({
-          description: "Tipo de contenido de la respuesta",
-          examples: ["text/event-stream"],
-        }),
-        "Cache-Control": t.String({
-          description: "Control de caché para la respuesta",
-          examples: ["no-cache"],
-        }),
-      },
-      {
-        title: "SSE Headers",
-        description: "Headers de la respuesta SSE",
-      }
-    ),
     response: {
       200: t.String({
         description: "Flujo de eventos SSE",
