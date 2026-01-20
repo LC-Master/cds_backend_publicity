@@ -10,15 +10,15 @@ import { shutdown } from "@lib/shutdown";
 import { forceRoute } from "@routes/force.route";
 import { playlistRoute } from "@routes/playlist.route";
 import { CONFIG } from "@config/config";
-import { auth } from "@plugin/auth.plugin";
-import { log } from "./plugin/log.plugin";
+import { authPlugin } from "@plugin/auth.plugin";
 import { apiDoc } from "./routes/openDoc.route";
+import { authMiddleware } from "./middlewares/auth.middleware";
 import { startApp } from "./plugin/startApp.plugin";
+import { authRoute } from "./routes/auth.route";
 
 export const app = new Elysia({ prefix: "/api" })
   .use(apiDoc)
-  .use(log)
-  .use(auth)
+  .use(authPlugin)
   .use(startApp)
   .use(
     cors({
@@ -28,11 +28,19 @@ export const app = new Elysia({ prefix: "/api" })
   )
   .use(logMiddleware)
   .use(healthRoute)
+  .use(eventsRoute)
+  .use(authMiddleware)
+  .use(authRoute)
   .use(mediaRoute)
   .use(forceRoute)
   .use(playlistRoute)
-  .use(eventsRoute)
-  .use(syncCrons);
+  .use(syncCrons)
+  .onError(({ code, status }) => {
+    if (code === "NOT_FOUND")
+      return status(404, {
+        message: "Route not found",
+      });
+  });
 
 app.listen({ port: CONFIG.PORT }, async (server) => {
   logger.info(

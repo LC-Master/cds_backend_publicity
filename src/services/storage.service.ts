@@ -156,8 +156,6 @@ export abstract class StorageService {
   }
   public static async removeOrphanMedia(activeMediaIds: string[]) {
     try {
-      // Do not perform orphan cleanup when no active IDs provided to avoid
-      // accidental mass-deletion when there are no active campaigns.
       if (!activeMediaIds || activeMediaIds.length === 0) {
         logger.info(
           "No active media IDs provided; skipping orphan media cleanup."

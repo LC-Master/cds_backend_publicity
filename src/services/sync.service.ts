@@ -93,7 +93,6 @@ export abstract class SyncService {
       return null;
     }
     if (!canSync.canSync && canSync.type == typeSyncEnum.noChange) {
-      // Check if playlist data exists; if it's missing, force a sync to recover state
       const existingPlaylist = await prisma.playlistData.findUnique({ where: { id: 1 } });
       if (!existingPlaylist) {
         logger.warn("SyncState reports noChange but PlaylistData is missing. Proceeding to sync to recover missing data.");

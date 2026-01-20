@@ -44,7 +44,7 @@ model Media {
   @@index([id, filename])
 }
 
-model ApiKeY {
+model ApiKey {
   id        Int   @id @default(1)
   key       String   @unique
   createdAt DateTime @default(now())

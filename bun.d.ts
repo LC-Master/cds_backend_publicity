@@ -21,3 +21,4 @@ declare module "bun" {
     FETCH_TIMEOUT_SECONDS: StringValue;
   }
 }
+declare var self: Worker;

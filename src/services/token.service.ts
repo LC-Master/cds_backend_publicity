@@ -1,8 +1,8 @@
-import z from "zod";
 import { jwt } from "../../types/jwt.type";
 import { TokenRepository } from "@src/repository/token.repository";
 import path from "path";
 import { logger } from "@src/providers/logger.provider";
+import { jwtSchema } from "@src/schemas/jwt.schema";
 
 export default abstract class TokenService {
   private static readonly pathFileToken = path.join(
@@ -10,12 +10,12 @@ export default abstract class TokenService {
     "token_api.txt"
   );
   private static async generateToken(jwt: jwt) {
-    return await jwt.sign({ userId: "123", isAdmin: true });
+    return await jwt.sign({ server: "api" });
   }
-  private static async validateToken(token: string) {
-    const validation = z.jwt().safeParse(token);
+  public static async validateToken(token: string) {
+    const validation = jwtSchema.safeParse(token);
 
-    if (!validation.success) throw new Error("Invalid token generated");
+    if (!validation.success) return null;
 
     return validation.data;
   }
@@ -35,6 +35,10 @@ export default abstract class TokenService {
       const token = await this.generateToken(jwt);
 
       const validated = await this.validateToken(token);
+
+      if(!validated) {
+        throw new Error("Generated token is invalid");
+      }
 
       const hashedToken = await this.hashToken(validated);
 

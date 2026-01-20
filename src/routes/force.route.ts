@@ -4,17 +4,32 @@ import { logger } from "../providers/logger.provider";
 import { PlaylistService } from "../services/playlist.service";
 import { SyncService } from "../services/sync.service";
 import { typeSyncEnum } from "../enums/typeSync.enum";
-import { auth } from "@src/plugin/auth.plugin";
+import { authPlugin } from "@src/plugin/auth.plugin";
 import TokenService from "@src/services/token.service";
+import { Unauthorized } from "@src/schemas/Unauthorized.schema";
 
-export const forceRoute = new Elysia({ prefix: "/sync" })
-  .use(auth)
+export const forceRoute = new Elysia({
+  prefix: "/sync",
+  detail: {
+    parameters: [
+      {
+        name: "Authorization",
+        in: "header",
+        required: true,
+        schema: { type: "string", example: "Bearer your_token_here" },
+        description: "Token de acceso JWT",
+      },
+    ],
+  },
+})
+  .use(authPlugin)
   .post(
     "/force",
     async ({ body }) => {
       const { force } = body;
       logger.info({ message: "Force sync requested", force });
-      if (!force) throw status(400, "Parámetro force debe ser true");
+      if (!force)
+        throw status(400, { error: "Parámetro force debe ser verdadero" });
       // Run sync in background
       (async () => {
         try {
@@ -29,6 +44,7 @@ export const forceRoute = new Elysia({ prefix: "/sync" })
           }
         } catch (err: any) {
           logger.error({ message: `Force sync failed: ${err.message}` });
+          return status(500, { error: "Error al forzar la sincronización" });
         } finally {
           logger.info({
             message: "Force Sync Finished",
@@ -36,22 +52,61 @@ export const forceRoute = new Elysia({ prefix: "/sync" })
           });
         }
       })();
-      return status(200, "Sincronización forzada iniciada");
+      return status(200, { message: "Sincronización forzada iniciada" });
     },
     {
-      body: t.Object({
-        force: t.Boolean({
-          error: "force debe ser un booleano",
-          description: "Indica si se debe forzar la sincronización de datos",
-        }),
-      }),
+      body: t.Object(
+        {
+          force: t.Boolean({
+            error: "force debe ser un booleano",
+            description: "Indica si se debe forzar la sincronización de datos",
+            examples: [true],
+          }),
+        },
+        {
+          title: "Force Sync Request Body",
+          description:
+            "Cuerpo de la solicitud para forzar la sincronización de datos",
+          examples: [{ force: true }, { force: false }],
+        }
+      ),
       response: {
-        200: t.String({
-          description: "Mensaje de éxito al iniciar la sincronización forzada",
-        }),
-        400: t.String({
-          description: "Error en los parámetros de la solicitud",
-        }),
+        200: t.Object(
+          {
+            message: t.String({
+              description:
+                "Mensaje de éxito al iniciar la sincronización forzada",
+            }),
+          },
+          {
+            title: "Sincronización Iniciada",
+            description:
+              "Respuesta exitosa al iniciar la sincronización forzada",
+          }
+        ),
+        401: Unauthorized,
+        400: t.Object(
+          {
+            error: t.String({
+              description: "Mensaje de error en los parámetros de la solicitud",
+            }),
+          },
+          {
+            title: "Bad Request",
+            description: "Error en los parámetros de la solicitud",
+          }
+        ),
+        500: t.Object(
+          {
+            error: t.String({
+              description: "Mensaje de error interno al forzar la sincronización",
+            }),
+          },
+          {
+            title: "Internal Server Error",
+            description: "Error interno al forzar la sincronización",
+          }
+        ),
       },
       summary: "Force Data Synchronization",
       detail: {
@@ -64,32 +119,64 @@ export const forceRoute = new Elysia({ prefix: "/sync" })
     "/force/token",
     async ({ body, jwt }) => {
       const { generate } = body;
-      if (!generate) throw status(400, "Parámetro generate debe ser true");
+      if (!generate)
+        throw status(400, { error: "Parámetro generate debe ser verdadero" });
       try {
         await TokenService.createApiKey(jwt);
         logger.info({ message: "Force token generation requested", generate });
-        return status(200, "Generación de token forzada iniciada");
+        return status(201, { message: "Generación de token forzada iniciada" });
       } catch (err: any) {
-        throw status(500, "Error generando el token");
+        throw status(500, { error: "Error generando el token" });
       }
     },
     {
-      body: t.Object({
-        generate: t.Boolean({
-          error: "generate debe ser un booleano",
-          description: "Indica si se debe generar un nuevo token de API",
-        }),
-      }),
+      body: t.Object(
+        {
+          generate: t.Boolean({
+            error: "generate debe ser un booleano",
+            description: "Campo que indica si se debe generar un nuevo token",
+          }),
+        },
+        {
+          title: "Force Token Generation Request Body",
+          description:
+            "Cuerpo de la solicitud para forzar la generación de un nuevo token de API",
+          examples: [{ generate: true }],
+        }
+      ),
       response: {
-        200: t.String({
-          description: "Mensaje de éxito al iniciar la generación del token",
-        }),
-        400: t.String({
+        201: t.Object(
+          {
+            message: t.String({
+              description:
+                "Mensaje de éxito al iniciar la generación del token",
+            }),
+          },
+          {
+            title: "Token Generation Success",
+            description: "Respuesta exitosa al iniciar la generación del token",
+          }
+        ),
+        401: Unauthorized,
+        400: t.Object({
+          error: t.String({
+            description: "Mensaje de error en los parámetros de la solicitud",
+          }),
+        },{
+          title: "Bad Request",
           description: "Error en los parámetros de la solicitud",
         }),
-        500: t.String({
-          description: "Error interno al generar el token",
-        }),
+        500: t.Object(
+          {
+            error: t.String({
+              description: "Mensaje de error al generar el token",
+            }),
+          },
+          {
+            title: "Internal Server Error",
+            description: "Error interno al generar el token",
+          }
+        ),
       },
       detail: {
         summary: "Force Token Generation",
