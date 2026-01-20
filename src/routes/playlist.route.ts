@@ -1,8 +1,17 @@
+/**
+ * @module Playlist Route
+ * @description
+ * Rutas relacionadas con la obtención del archivo `playlist.json`.
+ */
 import { logger } from "@src/providers/logger.provider";
 import { Unauthorized } from "@src/schemas/Unauthorized.schema";
 import Elysia, { file, t } from "elysia";
 import path from "path";
 
+/**
+ * Endpoint para servir el archivo `playlist.json` mediante Elysia.
+ * Devuelve 404 si el archivo no existe.
+ */
 export const playlistRoute = new Elysia({
   detail: {
     parameters: [

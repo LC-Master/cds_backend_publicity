@@ -1,8 +1,19 @@
+/**
+ * @module Fetch DTO
+ * @description
+ * Proveedor para realizar fetch al endpoint de snapshot y validar con el esquema Zod.
+ */
 import ms, { StringValue } from "ms";
 import { dto } from "../schemas/dto.schema";
 import { logger } from "./logger.provider";
 import { CONFIG } from "@src/config/config";
 
+/**
+ * Obtiene y valida el DTO desde la URL indicada.
+ * @template T
+ * @param {string} url - URL del endpoint que devuelve el DTO.
+ * @returns {Promise<T|null>} DTO validado o null en caso de error.
+ */
 export const fetchDto = async <T>(url: string): Promise<T | null> => {
   const controller = new AbortController();
   const timeout = ms(

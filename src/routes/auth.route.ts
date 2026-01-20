@@ -1,3 +1,8 @@
+/**
+ * @module Auth Route
+ * @description
+ * Rutas para autenticación de dispositivos y emisión de tokens de SSE.
+ */
 import { authPlugin } from "@src/plugin/auth.plugin";
 import { logger } from "@src/providers/logger.provider";
 import { Unauthorized } from "@src/schemas/Unauthorized.schema";

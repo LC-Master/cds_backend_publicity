@@ -1,3 +1,8 @@
+/**
+ * @module Start App Plugin
+ * @description
+ * Plugin de arranque que ejecuta tareas iniciales (sync, limpieza, etc.) al iniciar la app.
+ */
 import { typeSyncEnum } from "@src/enums/typeSync.enum";
 import { syncEventInstance } from "@src/event/syncEvent";
 import { logger } from "@src/providers/logger.provider";

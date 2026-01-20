@@ -1,11 +1,25 @@
-import { ISnapshotDto } from "../../types/dto.type";
+/**
+ * @module Playlist Service
+ * @description
+ * Genera el archivo `playlist.json` a partir del DTO sincronizado y gestiona la limpieza de media huérfana.
+ * Documentación en español; no se altera la lógica.
+ */import { ISnapshotDto } from "../../types/dto.type";
 import { prisma } from "../providers/prisma";
 import path from "path";
 import fs from "fs/promises";
 import { logger } from "../providers/logger.provider";
 import { StorageService } from "./storage.service";
 
+/**
+ * Servicio para generar la lista de reproducción (`playlist.json`) basada en campañas activas.
+ * @class PlaylistService
+ */
 export abstract class PlaylistService {
+  /**
+   * Genera o limpia `playlist.json` según campañas activas en el DTO.
+   * @param {ISnapshotDto} dto - DTO sincronizado con campañas y slots.
+   * @returns {{am: any[], pm: any[]}} Estructura de playlist creada.
+   */
   static async generate(dto: ISnapshotDto) {
     const now = new Date();
     const playlistPath = path.join(process.cwd(), "playlist");

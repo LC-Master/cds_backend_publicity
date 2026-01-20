@@ -1,3 +1,8 @@
+/**
+ * @module Health Route
+ * @description
+ * Endpoint sencillo para comprobar el estado (uptime, timestamp).
+ */
 import Elysia, { t } from "elysia";
 
 export const healthRoute = new Elysia().get(

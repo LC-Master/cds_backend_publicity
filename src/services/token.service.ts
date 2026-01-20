@@ -1,17 +1,39 @@
+/**
+ * @module Servicio de Tokens
+ * @description
+ * Servicio para generar, validar y gestionar la API key (token) usada por el servicio.
+ * Los métodos gestionan la creación, hashing y persistencia segura del token en la base de datos,
+ * y la creación de un archivo temporal `token_api.txt` con el token crudo (solo al crear).
+ * Todos los comentarios están en español y **no** se modifica la lógica.
+ */
 import { jwt } from "../../types/jwt.type";
 import { TokenRepository } from "@src/repository/token.repository";
 import path from "path";
 import { logger } from "@src/providers/logger.provider";
 import { jwtSchema } from "@src/schemas/jwt.schema";
 
+/**
+ * Servicio estático para manejo de API Keys.
+ * @class TokenService
+ */
 export default abstract class TokenService {
   private static readonly pathFileToken = path.join(
     process.cwd(),
     "token_api.txt"
   );
+  /**
+   * Genera un token JWT utilizando el helper `jwt`.
+   * @param {jwt} jwt - Instancia del helper JWT configurada en el servidor.
+   * @returns {Promise<string>} Token firmado.
+   */
   private static async generateToken(jwt: jwt) {
     return await jwt.sign({ server: "api" });
   }
+  /**
+   * Valida la estructura del token usando el esquema zod.
+   * @param {string} token - Token crudo a validar.
+   * @returns {Promise<string|null>} El token validado o null si no es válido.
+   */
   public static async validateToken(token: string) {
     const validation = jwtSchema.safeParse(token);
 
@@ -19,6 +41,11 @@ export default abstract class TokenService {
 
     return validation.data;
   }
+  /**
+   * Hashea un token usando Argon2id con parámetros de seguridad.
+   * @param {string} token - Token crudo.
+   * @returns {Promise<string>} Hash seguro del token.
+   */
   private static async hashToken(token: string) {
     const hashedToken = await Bun.password.hash(token, {
       algorithm: "argon2id",
@@ -30,6 +57,11 @@ export default abstract class TokenService {
 
     return hashedToken;
   }
+  /**
+   * Genera, valida, hashea y persiste una API key.
+   * También escribe el token crudo en `token_api.txt` (solo una vez).
+   * @param {jwt} jwt - Instancia JWT para firmar el token.
+   */
   public static async createApiKey(jwt: jwt) {
     try {
       const token = await this.generateToken(jwt);
@@ -69,9 +101,17 @@ export default abstract class TokenService {
       throw new Error(`Error creating API key: ${err.message}`);
     }
   }
+  /**
+   * Escribe el token crudo en disco en `token_api.txt`.
+   * @param {string} token - Token crudo a escribir.
+   */
   private static async createFileToken(token: string) {
     await Bun.write(this.pathFileToken, token);
   }
+  /**
+   * Verifica si existe una API key guardada en la DB.
+   * @returns {Promise<boolean>} True si existe, false si no.
+   */
   public static async tokenApiExists() {
     logger.info("Checking if API key exists in database...");
     const exists = await TokenRepository.exists();

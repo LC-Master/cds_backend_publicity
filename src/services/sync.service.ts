@@ -1,3 +1,10 @@
+/**
+ * @module Sync Service
+ * @description
+ * Servicio responsable del ciclo de sincronización: iniciar transacción de sync,
+ * decidir si se debe sincronizar, y ejecutar la descarga y persistencia de archivos.
+ * Documentación en español; no se modifica la lógica.
+ */
 import { CONFIG } from "@src/config/config";
 import { ISnapshotDto } from "../../types/dto.type";
 import { syncStateEnum } from "../enums/syncState.enum";
@@ -9,9 +16,18 @@ import { MediaRepository } from "../repository/media.repository";
 import { PlaylistDataRepository } from "../repository/playlistData.repository";
 import { StorageService } from "./storage.service";
 
+/**
+ * Servicio que coordina el flujo de sincronización con el CMS.
+ * @class SyncService
+ */
 export abstract class SyncService {
   private static readonly SYNC_TTL_HOURS = CONFIG.SYNC_TTL_HOURS;
 
+  /**
+   * Intenta iniciar una sincronización en la DB, respetando TTL y versión.
+   * @param {string} incomingVersion - Versión del DTO entrante.
+   * @returns {Promise<{ canSync: boolean; type: typeSyncEnum }>} Indica si se puede sincronizar y el tipo.
+   */
   static async tryStartSync(
     incomingVersion: string
   ): Promise<{ canSync: boolean; type: typeSyncEnum }> {
@@ -58,6 +74,11 @@ export abstract class SyncService {
     });
   }
 
+  /**
+   * Marca la sincronización como finalizada en la DB (éxito o fallo).
+   * @param {string} version - Versión que se guardará en el estado de sync.
+   * @param {string} [error] - Mensaje de error opcional si la sync falló.
+   */
   static async finishSync(version: string, error?: string) {
     await prisma.syncState.upsert({
       where: { id: 1 },
@@ -78,6 +99,10 @@ export abstract class SyncService {
       },
     });
   }
+  /**
+   * Ejecuta la sincronización completa: descarga DTO, verifica cambios, descarga archivos y guarda versión.
+   * @returns {Promise<{ dto: ISnapshotDto; type: typeSyncEnum } | null>} Resultado de la sincronización o null si no procede.
+   */
   static async syncData(): Promise<{
     dto: ISnapshotDto;
     type: typeSyncEnum;

@@ -17,6 +17,10 @@ import { Unauthorized } from "@src/schemas/Unauthorized.schema";
  * @returns {ReadableStream} Stream de texto formateado como `text/event-stream`.
  * @example .use(eventsRoute)
  */
+/**
+ * Endpoint SSE que expone eventos en tiempo real para clientes conectados.
+ * Validación de token SSE y envío de eventos `ping`, `dto:updated` y `playlist:generated`.
+ */
 export const eventsRoute = new Elysia().get(
   "/events",
   ({ query, status }) => {

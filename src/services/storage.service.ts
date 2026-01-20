@@ -1,3 +1,10 @@
+/**
+ * @module Storage Service
+ * @description
+ * Servicio de almacenamiento: manejo de carpeta temporal, descarga/verificación de archivos,
+ * movimientos, limpieza de huérfanos y utilidades de disco.
+ * Comentarios en español, sin tocar la lógica.
+ */
 import fs from "fs/promises";
 import path from "path";
 import { prisma } from "../providers/prisma";
@@ -8,7 +15,14 @@ import fileStreamProvider from "../providers/fileStream.provider";
 import { logger } from "../providers/logger.provider";
 import { CONFIG } from "@src/config/config";
 
+/**
+ * Funciones utilitarias para gestión de archivos y disco.
+ * @class StorageService
+ */
 export abstract class StorageService {
+  /**
+   * Limpia la carpeta temporal `Media/temp`. Crea la carpeta si no existe.
+   */
   public static async cleanTempFolder() {
     const tempPath = path.join(process.cwd(), "Media", "temp");
 
@@ -28,6 +42,11 @@ export abstract class StorageService {
       logger.error(`Error cleaning temp folder: ${err}`);
     }
   }
+  /**
+   * Filtra la lista de archivos devolviendo únicamente los que NO están marcados como descargados en DB.
+   * @param {IFile[]} files - Archivos del DTO para verificar.
+   * @returns {Promise<IFile[]>} Archivos que necesitan ser descargados.
+   */
   public static async filesExist(files: IFile[]) {
     const existingFiles = await prisma.media.findMany({
       where: {
@@ -44,6 +63,11 @@ export abstract class StorageService {
 
     return files.filter((file) => !existingFileIds.has(file.id));
   }
+  /**
+   * Mueve un archivo del directorio temporal al destino final, con manejo de EXDEV.
+   * @param {string} src - Ruta del archivo origen.
+   * @param {string} dest - Ruta de destino.
+   */
   private static async moveFile(src: string, dest: string) {
     try {
       await fs.rename(src, dest);
@@ -56,6 +80,12 @@ export abstract class StorageService {
       }
     }
   }
+  /**
+   * Verifica el checksum del archivo stage antes de moverlo.
+   * @param {IFile} file - Metadatos del archivo esperado.
+   * @param {string} stagePath - Ruta del archivo temporal descargado.
+   * @returns {Promise<boolean>} True si el checksum coincide.
+   */
   private static async verifyChecksum(file: IFile, stagePath: string) {
     const bunFile = Bun.file(stagePath);
     const arrayBuffer = await bunFile.arrayBuffer();
@@ -67,11 +97,20 @@ export abstract class StorageService {
     }
     return isValid;
   }
+  /**
+   * Generador que divide un arreglo en chunks del tamaño indicado.
+   * @generator
+   */
   private static *getChunks<T>(arr: T[], size: number) {
     for (let i = 0; i < arr.length; i += size) {
       yield arr.slice(i, i + size);
     }
   }
+  /**
+   * Procesa la descarga de un solo archivo: descarga, verifica checksum y mueve al destino final.
+   * @param {IFile} file - Metadatos del archivo a procesar.
+   * @returns {Promise<IMediaFile>} Resultado con estado y ruta local si aplica.
+   */
   private static async processFile(file: IFile): Promise<IMediaFile> {
     const name = file.id + path.extname(file.name);
     const stagePath = path.join(process.cwd(), "Media", "temp", name);
@@ -105,6 +144,11 @@ export abstract class StorageService {
     }
   }
 
+  /**
+   * Descarga y verifica en paralelo (por chunks) una lista de archivos.
+   * @param {IFile[]} files - Archivos a descargar y verificar.
+   * @returns {Promise<IMediaFile[]>} Resultados individuales por archivo.
+   */
   public static async downloadAndVerifyFiles(files: IFile[]) {
     const chunks = this.getChunks(
       files,
@@ -119,6 +163,11 @@ export abstract class StorageService {
     }
     return results;
   }
+  /**
+   * Comprueba si existe una ruta y si es un directorio.
+   * @param {string} p - Ruta a verificar.
+   * @returns {Promise<boolean>} True si existe y es directorio.
+   */
   public static async pathExists(p: string): Promise<boolean> {
     try {
       await fs.access(p);
@@ -128,6 +177,9 @@ export abstract class StorageService {
       return false;
     }
   }
+  /**
+   * Reintenta descargas que antes fallaron y actualiza el estado en DB.
+   */
   public static async retryFailedDownloads() {
     try {
       const failedMedia = await prisma.media.findMany({
@@ -154,6 +206,10 @@ export abstract class StorageService {
       logger.error(`Error retrying failed downloads: ${err}`);
     }
   }
+  /**
+   * Elimina archivos y registros de media que ya no son activos (huérfanos).
+   * @param {string[]} activeMediaIds - IDs activos que deben mantenerse.
+   */
   public static async removeOrphanMedia(activeMediaIds: string[]) {
     try {
       if (!activeMediaIds || activeMediaIds.length === 0) {
@@ -191,6 +247,9 @@ export abstract class StorageService {
       logger.error(`Error removing orphan media: ${err}`);
     }
   }
+  /**
+   * Crea el directorio `logs` si no existe.
+   */
   static createLogDirIfNotExists = async () => {
     const logDir = path.join(process.cwd(), "logs");
     try {

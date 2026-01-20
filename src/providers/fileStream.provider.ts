@@ -1,7 +1,17 @@
+/**
+ * @module File Stream Provider
+ * @description
+ * Proveedor que descarga el recurso binario del CMS con timeout y validaciones.
+ */
 import ms from "ms";
 import { logger } from "./logger.provider";
 import { CONFIG } from "@src/config/config";
 
+/**
+ * Descarga el recurso del CMS y devuelve la respuesta para su procesamiento.
+ * @param {string} id - ID de media a descargar.
+ * @returns {Promise<Response>} Response del fetch con el contenido.
+ */
 export default async function fileStreamProvider(id: string) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), ms("30s"));

@@ -1,3 +1,8 @@
+/**
+ * @module Media Route
+ * @description
+ * Sirve los archivos estáticos desde la carpeta `Media`.
+ */
 import staticPlugin from "@elysiajs/static";
 import Elysia from "elysia";
 import ms from "ms";

@@ -1,3 +1,8 @@
+/**
+ * @module Health Service
+ * @description
+ * Servicio encargado de reportar el estado de salud al CMS y recolectar métricas internas.
+ */
 import { CONFIG } from "@src/config/config";
 import { IFile } from "../../types/file.type";
 import { logger } from "../providers/logger.provider";
@@ -18,6 +23,10 @@ type IHealth = {
 };
 
 export abstract class HealthService {
+  /**
+   * Recolecta métricas y las envía al endpoint de health del CMS.
+   * Maneja errores internamente y registra resultados.
+   */
   public static async isHealthy(): Promise<void> {
     try {
       StorageService.getDiskInfo();

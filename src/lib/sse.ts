@@ -1,8 +1,16 @@
+/**
+ * @module SSE Helper
+ * @description
+ * Utilidad para serializar y encolar mensajes SSE al controller de un ReadableStream.
+ */
 import { z } from "zod";
 import { logger } from "../providers/logger.provider";
 
 const encoder = new TextEncoder();
 
+/**
+ * Encola un mensaje SSE formateado en el controller suministrado.
+ */
 export default function sse({
   event,
   data,

@@ -1,3 +1,8 @@
+/**
+ * @module Server entry
+ * @description
+ * Punto de entrada para la aplicación Elysia: registra plugins, rutas y manejadores de error.
+ */
 import { Elysia } from "elysia";
 import { syncCrons } from "@crons/sync.crons";
 import { healthRoute } from "@routes/health.route";

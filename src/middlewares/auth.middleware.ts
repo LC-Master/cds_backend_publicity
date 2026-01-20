@@ -1,3 +1,8 @@
+/**
+ * @module Auth Middleware
+ * @description
+ * Middleware global que valida el header Bearer y comprueba token/hashes en DB.
+ */
 import bearer from "@elysiajs/bearer";
 import { authPlugin } from "@src/plugin/auth.plugin";
 import { logger } from "@src/providers/logger.provider";
