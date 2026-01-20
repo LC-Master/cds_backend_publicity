@@ -21,12 +21,8 @@ export const syncCrons = new Elysia()
         });
         try {
           const result = await SyncService.syncData();
-          if (
-            result?.dto &&
-            (result.type === typeSyncEnum.noChange ||
-              result.type === typeSyncEnum.newSync)
-          ) {
-            await PlaylistService.generate(result.dto);
+          if (result) {
+            await PlaylistService.generate(result);
             syncEventInstance.emit("dto:updated", true);
           }
         } catch (err: any) {
@@ -51,12 +47,8 @@ export const syncCrons = new Elysia()
         });
         try {
           const result = await SyncService.syncData();
-          if (
-            result?.dto &&
-            (result.type === typeSyncEnum.noChange ||
-              result.type === typeSyncEnum.newSync)
-          ) {
-            await PlaylistService.generate(result.dto);
+          if (result) {
+            await PlaylistService.generate(result);
             syncEventInstance.emit("dto:updated", true);
           }
         } catch (err: any) {

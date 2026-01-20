@@ -47,7 +47,7 @@ export abstract class StorageService {
    * @param {IFile[]} files - Archivos del DTO para verificar.
    * @returns {Promise<IFile[]>} Archivos que necesitan ser descargados.
    */
-  public static async filesExist(files: IFile[]) {
+  public static async getMissingFiles(files: IFile[]): Promise<IFile[]> {
     const existingFiles = await prisma.media.findMany({
       where: {
         OR: files.map((file) => ({
@@ -86,7 +86,7 @@ export abstract class StorageService {
    * @param {string} stagePath - Ruta del archivo temporal descargado.
    * @returns {Promise<boolean>} True si el checksum coincide.
    */
-  private static async verifyChecksum(file: IFile, stagePath: string) {
+  private static async verifyChecksum(file: IFile, stagePath: string): Promise<boolean> {
     const bunFile = Bun.file(stagePath);
     const arrayBuffer = await bunFile.arrayBuffer();
     const computedChecksum = Bun.MD5.hash(arrayBuffer, "hex");
@@ -101,7 +101,7 @@ export abstract class StorageService {
    * Generador que divide un arreglo en chunks del tamaño indicado.
    * @generator
    */
-  private static *getChunks<T>(arr: T[], size: number) {
+  private static *getChunks<T>(arr: T[], size: number): Generator<T[]> {
     for (let i = 0; i < arr.length; i += size) {
       yield arr.slice(i, i + size);
     }
@@ -149,7 +149,7 @@ export abstract class StorageService {
    * @param {IFile[]} files - Archivos a descargar y verificar.
    * @returns {Promise<IMediaFile[]>} Resultados individuales por archivo.
    */
-  public static async downloadAndVerifyFiles(files: IFile[]) {
+  public static async downloadAndVerifyFiles(files: IFile[]): Promise<IMediaFile[]> {
     const chunks = this.getChunks(
       files,
       CONFIG.DOWNLOAD_CONCURRENCY

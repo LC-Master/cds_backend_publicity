@@ -15,13 +15,19 @@ import { prisma } from "../providers/prisma";
 import { MediaRepository } from "../repository/media.repository";
 import { PlaylistDataRepository } from "../repository/playlistData.repository";
 import { StorageService } from "./storage.service";
+import path from "path";
 
 /**
- * Servicio que coordina el flujo de sincronización con el CMS.
  * @class SyncService
+ * @author Francisco A. Rojas F.
+ * @description
+ * Coordina la integridad entre el CMS (SQL Server), la DB local (Prisma) y el sistema de archivos.
+ * Implementa lógica de auto-recuperación: si la media física no existe, fuerza la descarga
+ * aunque la versión del DTO no haya cambiado.
  */
 export abstract class SyncService {
   private static readonly SYNC_TTL_HOURS = CONFIG.SYNC_TTL_HOURS;
+  private static readonly mediaPath = path.join(process.cwd(), "Media");
 
   /**
    * Intenta iniciar una sincronización en la DB, respetando TTL y versión.
@@ -35,7 +41,9 @@ export abstract class SyncService {
 
     return prisma.$transaction(async (tx) => {
       const row = await tx.syncState.findUnique({ where: { id: 1 } });
-
+      const playlistData = await tx.playlistData.findUnique({
+        where: { id: 1 },
+      });
       if (row) {
         if (row.syncing && row.syncStartedAt) {
           const diffHours =
@@ -44,8 +52,15 @@ export abstract class SyncService {
             return { canSync: false, type: typeSyncEnum.Syncing };
         }
 
-        if (row.syncVersion === incomingVersion)
+        if (row.syncVersion === incomingVersion) {
+          if (!playlistData) {
+            logger.warn(
+              "SyncState reports noChange but PlaylistData is missing. Proceeding to sync to recover missing data."
+            );
+            return { canSync: true, type: typeSyncEnum.newSync };
+          }
           return { canSync: false, type: typeSyncEnum.noChange };
+        }
         await tx.syncState.update({
           where: { id: 1 },
           data: {
@@ -101,30 +116,22 @@ export abstract class SyncService {
   }
   /**
    * Ejecuta la sincronización completa: descarga DTO, verifica cambios, descarga archivos y guarda versión.
-   * @returns {Promise<{ dto: ISnapshotDto; type: typeSyncEnum } | null>} Resultado de la sincronización o null si no procede.
+   * @returns {Promise<  ISnapshotDto   | null>} Resultado de la sincronización o null si no procede.
    */
-  static async syncData(): Promise<{
-    dto: ISnapshotDto;
-    type: typeSyncEnum;
-  } | null> {
+  static async syncData(): Promise<ISnapshotDto | null> {
     const dto = await fetchDto<ISnapshotDto>(CONFIG.CMS_ROUTE_SNAPSHOT);
     if (!dto) {
       logger.warn("Failed to fetch DTO from CMS.");
       throw new Error("Failed to fetch DTO");
     }
     const canSync = await this.tryStartSync(dto.meta.version);
-    if (!canSync.canSync && canSync.type == typeSyncEnum.Syncing) {
+    if (!canSync.canSync && canSync.type === typeSyncEnum.Syncing) {
       logger.info("Sync already in progress. Aborting new sync attempt.");
       return null;
     }
-    if (!canSync.canSync && canSync.type == typeSyncEnum.noChange) {
-      const existingPlaylist = await prisma.playlistData.findUnique({ where: { id: 1 } });
-      if (!existingPlaylist) {
-        logger.warn("SyncState reports noChange but PlaylistData is missing. Proceeding to sync to recover missing data.");
-      } else {
-        logger.info("No changes detected in DTO version. Sync not required.");
-        return { dto, type: typeSyncEnum.noChange };
-      }
+    if (!canSync.canSync && canSync.type === typeSyncEnum.noChange) {
+      logger.info("No changes detected in DTO version. Sync not required.");
+      return dto;
     }
 
     try {
@@ -134,8 +141,10 @@ export abstract class SyncService {
 
       logger.info(`Found ${mediaList.length} media entries in DTO.`);
 
-      const syncedFiles = await StorageService.filesExist(mediaList);
-      logger.info(`After checking DB, ${syncedFiles.length} files need to be downloaded.`);
+      const syncedFiles = await StorageService.getMissingFiles(mediaList);
+      logger.info(
+        `After checking DB, ${syncedFiles.length} files need to be downloaded.`
+      );
 
       const files = await StorageService.downloadAndVerifyFiles(syncedFiles);
       logger.info(`Download finished: received ${files.length} file results.`);
@@ -157,6 +166,6 @@ export abstract class SyncService {
       await StorageService.cleanTempFolder();
     }
 
-    return { dto, type: typeSyncEnum.newSync };
+    return dto;
   }
 }

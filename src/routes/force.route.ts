@@ -34,12 +34,8 @@ export const forceRoute = new Elysia({
       (async () => {
         try {
           const result = await SyncService.syncData();
-          if (
-            result?.dto &&
-            (result.type === typeSyncEnum.noChange ||
-              result.type === typeSyncEnum.newSync)
-          ) {
-            await PlaylistService.generate(result.dto);
+          if (result) {
+            await PlaylistService.generate(result);
             syncEventInstance.emit("dto:updated", true);
           }
         } catch (err: any) {
@@ -99,7 +95,8 @@ export const forceRoute = new Elysia({
         500: t.Object(
           {
             error: t.String({
-              description: "Mensaje de error interno al forzar la sincronización",
+              description:
+                "Mensaje de error interno al forzar la sincronización",
             }),
           },
           {
@@ -158,14 +155,17 @@ export const forceRoute = new Elysia({
           }
         ),
         401: Unauthorized,
-        400: t.Object({
-          error: t.String({
-            description: "Mensaje de error en los parámetros de la solicitud",
-          }),
-        },{
-          title: "Bad Request",
-          description: "Error en los parámetros de la solicitud",
-        }),
+        400: t.Object(
+          {
+            error: t.String({
+              description: "Mensaje de error en los parámetros de la solicitud",
+            }),
+          },
+          {
+            title: "Bad Request",
+            description: "Error en los parámetros de la solicitud",
+          }
+        ),
         500: t.Object(
           {
             error: t.String({
