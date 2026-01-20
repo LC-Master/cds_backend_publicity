@@ -1,4 +1,3 @@
-import { typeSyncEnum } from "@src/enums/typeSync.enum";
 import { syncEventInstance } from "@src/event/syncEvent";
 import { logger } from "@src/providers/logger.provider";
 import { connectDb } from "@src/providers/prisma";
@@ -25,6 +24,7 @@ export const startApp = new Elysia().use(authPlugin).onStart(async function () {
   await StorageService.createLogDirIfNotExists();
 
   await StorageService.cleanTempFolder();
+
   await StorageService.retryFailedDownloads();
 
   try {

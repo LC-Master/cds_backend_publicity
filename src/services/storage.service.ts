@@ -21,6 +21,32 @@ import { CONFIG } from "@src/config/config";
  */
 export abstract class StorageService {
   /**
+   * Verifica si un directorio existe y si está vacío.
+   * @param {string} dirPath - Ruta del directorio a verificar.
+   * @returns {Promise<string[] | undefined>} Lista de archivos o undefined si está vacío.
+   */
+  public static async verifyDirectory(
+    dirPath: string
+  ): Promise<string[] | undefined> {
+    try {
+      const exist = await this.pathExists(dirPath);
+      if (!exist) {
+        await fs.mkdir(dirPath, { recursive: true });
+      }
+      const files = await fs.readdir(dirPath);
+
+      if (files.length === 0) {
+        logger.info(`Directory is empty: ${dirPath}`);
+        return undefined;
+      }
+
+      return files;
+    } catch (err) {
+      logger.error(`Error verifying directory ${dirPath}: ${err}`);
+      return undefined;
+    }
+  }
+  /**
    * Limpia la carpeta temporal `Media/temp`. Crea la carpeta si no existe.
    */
   public static async cleanTempFolder() {
@@ -86,7 +112,10 @@ export abstract class StorageService {
    * @param {string} stagePath - Ruta del archivo temporal descargado.
    * @returns {Promise<boolean>} True si el checksum coincide.
    */
-  private static async verifyChecksum(file: IFile, stagePath: string): Promise<boolean> {
+  private static async verifyChecksum(
+    file: IFile,
+    stagePath: string
+  ): Promise<boolean> {
     const bunFile = Bun.file(stagePath);
     const arrayBuffer = await bunFile.arrayBuffer();
     const computedChecksum = Bun.MD5.hash(arrayBuffer, "hex");
@@ -149,11 +178,10 @@ export abstract class StorageService {
    * @param {IFile[]} files - Archivos a descargar y verificar.
    * @returns {Promise<IMediaFile[]>} Resultados individuales por archivo.
    */
-  public static async downloadAndVerifyFiles(files: IFile[]): Promise<IMediaFile[]> {
-    const chunks = this.getChunks(
-      files,
-      CONFIG.DOWNLOAD_CONCURRENCY
-    );
+  public static async downloadAndVerifyFiles(
+    files: IFile[]
+  ): Promise<IMediaFile[]> {
+    const chunks = this.getChunks(files, CONFIG.DOWNLOAD_CONCURRENCY);
     let results: IMediaFile[] = [];
     for (const chunk of chunks) {
       const chunkResults = await Promise.all(
@@ -312,17 +340,17 @@ export abstract class StorageService {
     try {
       const entries = await fs.readdir(filePath, { withFileTypes: true });
       for (const entry of entries) {
-      const entryPath = path.join(filePath, entry.name);
-      try {
-        if (entry.isFile() || entry.isSymbolicLink()) {
-        await fs.unlink(entryPath);
-        logger.info(`Deleted file: ${entryPath}`);
-        } else {
-        logger.info(`Skipping directory: ${entryPath}`);
+        const entryPath = path.join(filePath, entry.name);
+        try {
+          if (entry.isFile() || entry.isSymbolicLink()) {
+            await fs.unlink(entryPath);
+            logger.info(`Deleted file: ${entryPath}`);
+          } else {
+            logger.info(`Skipping directory: ${entryPath}`);
+          }
+        } catch (err) {
+          logger.error(`Error deleting ${entryPath}: ${err}`);
         }
-      } catch (err) {
-        logger.error(`Error deleting ${entryPath}: ${err}`);
-      }
       }
       logger.info(`Successfully cleared files at path: ${filePath}`);
     } catch (err) {
