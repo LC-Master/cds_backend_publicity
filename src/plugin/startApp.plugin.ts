@@ -14,30 +14,30 @@ import { authPlugin } from "./auth.plugin";
  */
 export const startApp = new Elysia().use(authPlugin).onStart(async function () {
   if (!(await TokenService.tokenApiExists())) {
-    await TokenService.createApiKey(startApp.decorator.jwt);
+  await TokenService.createApiKey(startApp.decorator.jwt);
   }
-  // if (!await connectDb()) {
-  //   logger.fatal("cannot connect to database, exiting...");
-  //   process.exit(1);
-  // }
-  // await StorageService.createLogDirIfNotExists();
+  if (!await connectDb()) {
+    logger.fatal("cannot connect to database, exiting...");
+    process.exit(1);
+  }
+  await StorageService.createLogDirIfNotExists();
+  await StorageService.cleanTempFolder();
 
-  // await StorageService.cleanTempFolder();
+  await SyncService.checkSyncInStartup();
 
-  // await StorageService.retryFailedDownloads();
-
-  // try {
-  //   const result = await SyncService.syncData();
-  //   if (result) {
-  //     await PlaylistService.generate(result);
-  //     syncEventInstance.emit("dto:updated", true);
-  //   }
-  // } catch (err: any) {
-  //   logger.error({ message: `Startup sync failed: ${err.message}` });
-  // } finally {
-  //   logger.info({
-  //     message: "Startup sync finished",
-  //     time: new Date().toLocaleString(),
-  //   });
-  // }
+  await StorageService.retryFailedDownloads();
+  try {
+    const result = await SyncService.syncData();
+    if (result) {
+      await PlaylistService.generate(result);
+      syncEventInstance.emit("dto:updated", true);
+    }
+  } catch (err: any) {
+    logger.error({ message: `Startup sync failed: ${err.message}` });
+  } finally {
+    logger.info({
+      message: "Startup sync finished",
+      time: new Date().toLocaleString(),
+    });
+  }
 });

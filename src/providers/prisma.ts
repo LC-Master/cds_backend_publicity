@@ -9,7 +9,7 @@ const sqlConfig = {
   password: DB_PASSWORD,
   database: DB_NAME,
   server: DB_HOST,
-  port: Number(DB_PORT),
+  port: DB_PORT,
   pool: {
     max: 10,
     min: 0,

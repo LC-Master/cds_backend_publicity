@@ -16,7 +16,6 @@ import { MediaRepository } from "../repository/media.repository";
 import { PlaylistDataRepository } from "../repository/playlistData.repository";
 import { StorageService } from "./storage.service";
 import { extractMediaList } from "@src/lib/campaignHelpers";
-import { IFile } from "../../types/file.type";
 import { MediaService } from "./media.service";
 
 /**
@@ -63,16 +62,18 @@ export abstract class SyncService {
           return { canSync: false, type: typeSyncEnum.Syncing };
         }
 
-        logger.warn(
-          `Sync TTL expired (${diffHours.toFixed(2)}h). Overriding stale sync.`
-        );
+        logger.warn({
+          message: "Sync TTL expired. Overriding stale sync.",
+          timeStamp: `${diffHours.toFixed(2)}h`,
+        });
       }
 
       const hasNoChanges = row?.syncVersion === incomingVersion;
       if (hasNoChanges && playlistData) {
-        logger.info(
-          `Sync skipped: Version ${incomingVersion} already up to date.`
-        );
+        logger.info({
+          message: `Sync skipped: Version already up to date.`,
+          id: incomingVersion,
+        });
         return { canSync: false, type: typeSyncEnum.noChange };
       }
 
@@ -138,10 +139,94 @@ export abstract class SyncService {
     });
   }
   /**
+   * Comprueba y normaliza el estado de sincronización durante el arranque de la app.
+   * - Si no existe registro, se inicializa uno por defecto.
+   * - Si había una sync en progreso, se marca como fallida y se registra un mensaje.
+   */
+  public static async checkSyncInStartup(): Promise<void> {
+    const row = await prisma.syncState.findUnique({ where: { id: 1 } });
+
+    const wasInProgress =
+      row?.status === syncStateEnum.InProgress && !!row?.syncStartedAt;
+
+    if (!row) {
+      logger.info({
+        message: "No sync state found at startup. Initializing default state.",
+      });
+    } else if (wasInProgress) {
+      const elapsedHours = (
+        (Date.now() - row.syncStartedAt!.getTime()) /
+        1000 /
+        60 /
+        60
+      ).toFixed(2);
+
+      logger.warn({
+        message:
+          "Detected in-progress sync at startup. Marking as failed due to server restart.",
+        previousStatus: row.status,
+        syncVersion: row.syncVersion ?? null,
+        syncStartedAt: row.syncStartedAt,
+        elapsedHours,
+      });
+    } else {
+      logger.info({
+        message: "Sync state at startup",
+        previousStatus: row!.status,
+        syncVersion: row!.syncVersion ?? null,
+        syncStartedAt: row!.syncStartedAt ?? null,
+        errorMessage: row!.errorMessage ?? null,
+      });
+    }
+
+    const newStatus =
+      row?.status === syncStateEnum.InProgress
+        ? syncStateEnum.Failed
+        : row?.status ?? syncStateEnum.Completed;
+
+    const newErrorMessage =
+      row?.status === syncStateEnum.InProgress
+        ? "Sync interrupted due to server restart"
+        : row?.errorMessage ?? null;
+
+    try {
+      const result = await prisma.syncState.upsert({
+        where: { id: 1 },
+        update: {
+          syncing: false,
+          syncStartedAt: null,
+          status: newStatus,
+          errorMessage: newErrorMessage,
+        },
+        create: {
+          id: 1,
+          syncing: false,
+          syncStartedAt: null,
+          status: syncStateEnum.Completed,
+          errorMessage: null,
+        },
+      });
+
+      logger.info({
+        message: "Sync state updated during startup check",
+        newStatus: result.status,
+        syncing: result.syncing,
+        syncVersion: result.syncVersion ?? null,
+        errorMessage: result.errorMessage ?? null,
+      });
+    } catch (err: any) {
+      logger.error({
+        message: "Failed to update sync state during startup check",
+        error: err?.message ?? String(err),
+      });
+      throw err;
+    }
+  }
+  /**
    * Ejecuta la sincronización completa: descarga DTO, verifica cambios, descarga archivos y guarda versión.
    * @returns {Promise<ISnapshotDto | null>} Resultado de la sincronización o null si no procede.
    */
-  static async syncData(): Promise<ISnapshotDto | null> {
+  public static async syncData(): Promise<ISnapshotDto | null> {
     const dto = await fetchDto<ISnapshotDto>(CONFIG.CMS_ROUTE_SNAPSHOT);
     if (!dto) {
       logger.warn("Failed to fetch DTO from CMS.");
@@ -171,28 +256,44 @@ export abstract class SyncService {
         throw new Error("DTO contains no media entries to process.");
       }
 
-      logger.info(`Found ${mediaList.length} media entries in DTO.`);
+      logger.info({
+        message: "Found media entries in DTO to verify",
+        media: mediaList.length,
+      });
 
       const syncedFiles = await MediaService.getMissingFiles(
         mediaList,
         forcedMissingIds
       );
 
-      logger.info(
-        `After checking DB, ${syncedFiles.length} files need to be downloaded.`
-      );
+      if (syncedFiles.length > 0) {
+        logger.info({
+          message: "After checking DB files need to be downloaded",
+          syncedFiles,
+        });
 
-      const files = await StorageService.downloadAndVerifyFiles(syncedFiles);
-      logger.info(`Download finished: received ${files.length} file results.`);
+        const files = await StorageService.downloadAndVerifyFiles(syncedFiles);
 
-      const savedFiles = await MediaRepository.saveMany(files);
+        logger.info({
+          message: "Download finished",
+          filesReceived: files.length,
+        });
 
-      logger.info(
-        `Sync completed: ${savedFiles.length} media files processed.`
-      );
+        const savedFiles = await MediaRepository.saveMany(files);
+        logger.info({
+          message: "Sync completed",
+          filesProcessed: savedFiles.length,
+        });
+      }
+
+      logger.info({
+        message: "Sync Completed Successfully",
+        version: dto.meta.version,
+      });
+
       await PlaylistDataRepository.saveVersion(dto);
     } catch (err: { message: string } | any) {
-      logger.error(`Sync failed services: ${err.message}`);
+      logger.error({ message: `Sync failed services`, error: err.message });
       return null;
     } finally {
       await this.finishSync(dto.meta.version);

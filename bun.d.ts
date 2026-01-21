@@ -2,6 +2,7 @@ import { StringValue } from "ms";
 
 declare module "bun" {
   interface Env {
+    APP_BASE: string;
     VERSION: string;
     DATABASE_URL: string;
     API_KEY_CMS: string;
@@ -15,13 +16,13 @@ declare module "bun" {
     DB_NAME: string;
     SERVER_NEXT_PUBLIC_PRICE_CHECKER_URL: string;
     DB_HOST: string;
-    DB_PORT: string;
+    DB_PORT: number;
     MEDIA_PATH: string;
     PLAYLIST_PATH: string;
     LOGS_PATH: string;
     SYNC_TTL_HOURS: number;
     DOWNLOAD_CONCURRENCY: number;
-    FETCH_TIMEOUT_SECONDS: StringValue;
+    FETCH_TIMEOUT_SECONDS: number;
   }
 }
 declare var self: Worker;
