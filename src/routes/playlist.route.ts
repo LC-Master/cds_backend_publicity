@@ -3,6 +3,7 @@
  * @description
  * Rutas relacionadas con la obtención del archivo `playlist.json`.
  */
+import { CONFIG } from "@src/config/config";
 import { logger } from "@src/providers/logger.provider";
 import { Unauthorized } from "@src/schemas/Unauthorized.schema";
 import Elysia, { file, t } from "elysia";
@@ -27,13 +28,13 @@ export const playlistRoute = new Elysia({
 }).get(
   "/playlist",
   async ({ status }) => {
-    const playlistPath = path.join(process.cwd(), "playlist", "playlist.json");
+    const playlistPath = path.join(CONFIG.PLAYLIST_PATH, "playlist.json");
     try {
       if (!(await Bun.file(playlistPath).exists())) {
         logger.warn({
           message: "Playlist file not found",
         });
-        throw status(404, { error: "Playlist not found" });
+        return status(404, { error: "Playlist not found" });
       }
       return file(playlistPath);
     } catch (err) {

@@ -37,19 +37,17 @@ describe("TokenService", () => {
 
     const jwtMock = { sign: mock(async () => "raw.jwt.token") };
 
-    // Mock z.jwt().safeParse to return a parsed object
-    mock.module("zod", () => ({
-      default: {
-        jwt: () => ({
-          safeParse: (t: string) => ({
-            success: true,
-            data: "secret",
-          }),
+    // Mock jwt.schema to return valid
+    mock.module("../src/schemas/jwt.schema.ts", () => ({
+      jwtSchema: {
+        safeParse: (t: string) => ({
+          success: true,
+          data: "secret",
         }),
       },
     }));
 
-    // intercept Bun.write
+     // intercept Bun.write
     const originalWrite = Bun.write;
     let written: string | null = null;
     (Bun as any).write = mock(async (path: string, content: string) => {
