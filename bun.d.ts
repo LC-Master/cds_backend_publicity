@@ -16,6 +16,9 @@ declare module "bun" {
     SERVER_NEXT_PUBLIC_PRICE_CHECKER_URL: string;
     DB_HOST: string;
     DB_PORT: string;
+    MEDIA_PATH: string;
+    PLAYLIST_PATH: string;
+    LOGS_PATH: string;
     SYNC_TTL_HOURS: number;
     DOWNLOAD_CONCURRENCY: number;
     FETCH_TIMEOUT_SECONDS: StringValue;

@@ -1,7 +1,10 @@
 import { Env } from "bun";
 import packageJson from "../../package.json";
-
+import path from 'path'
 export const CONFIG: Env = {
+  MEDIA_PATH: Bun.env.MEDIA_PATH || path.join(process.cwd(), "Media"),
+  PLAYLIST_PATH: Bun.env.PLAYLIST_PATH || path.join(process.cwd(), "Playlist"),
+  LOGS_PATH: Bun.env.LOGS_PATH || path.join(process.cwd(), "Logs"),
   VERSION: packageJson.version || "0.0.1",
   SECRET_KEY: Bun.env.SECRET_KEY || "default_secret_key",
   API_KEY_CMS: Bun.env.API_KEY_CMS || "default_api_key_cms",

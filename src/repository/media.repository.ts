@@ -3,11 +3,32 @@
  * @description
  * Repositorio para persistir y actualizar registros de media en la base de datos.
  */
-import { IMediaFile } from "../../types/file.type";
+import { IFile, IMediaFile } from "../../types/file.type";
 import { mediaStatusEnum } from "../enums/mediaStatus.enum";
 import { prisma } from "../providers/prisma";
 
 export abstract class MediaRepository {
+  /**
+   * Filtra la lista de archivos devolviendo únicamente los que NO están marcados como descargados en DB.
+   * @param {IFile[]} files - Archivos del DTO para verificar.
+   * @returns {Promise<IFile[]>} Archivos que necesitan ser descargados.
+   */
+  public static async getMissingFiles(files: IFile[]): Promise<IFile[]> {
+    const existingFiles = await prisma.media.findMany({
+      where: {
+        OR: files.map((file) => ({
+          id: file.id,
+          checksum: file.checksum,
+          isDownloaded: true,
+        })),
+      },
+      select: { id: true },
+    });
+
+    const existingFileIds = new Set(existingFiles.map((file) => file.id));
+
+    return files.filter((file) => !existingFileIds.has(file.id));
+  }
   /**
    * Guarda un registro de media en la DB.
    * @param {IMediaFile} file - Datos del archivo a persistir.

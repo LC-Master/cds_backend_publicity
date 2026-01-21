@@ -20,7 +20,9 @@ import { CONFIG } from "@src/config/config";
  * @class StorageService
  */
 export abstract class StorageService {
-  public static readonly MEDIA_PATH = path.join(process.cwd(), "Media");
+  static checkPhysicalFiles(): any {
+    throw new Error("Method not implemented.");
+  }
   /**
    *@description
    * Reconciliar la integridad entre la base de datos y el sistema de archivos.
@@ -36,9 +38,9 @@ export abstract class StorageService {
         select: { id: true, filename: true },
       });
 
-      if (allDownloadedMedia.length === 0) return ;
+      if (allDownloadedMedia.length === 0) return;
 
-      const listMediaFile = (await this.listDirectory(this.MEDIA_PATH)) || [];
+      const listMediaFile = (await this.listDirectory(CONFIG.MEDIA_PATH)) || [];
 
       const idsToDelete = allDownloadedMedia
         .filter((media) => {
@@ -62,7 +64,6 @@ export abstract class StorageService {
       logger.error(`Error reconciling media integrity: ${err}`);
     }
   }
-
   /**
    * Verifica si un directorio existe y si está vacío.
    * @param {string} dirPath - Ruta del directorio a verificar.
@@ -93,7 +94,7 @@ export abstract class StorageService {
    * Limpia la carpeta temporal `Media/temp`. Crea la carpeta si no existe.
    */
   public static async cleanTempFolder() {
-    const tempPath = path.join(process.cwd(), "Media", "temp");
+    const tempPath = path.join(CONFIG.MEDIA_PATH, "temp");
 
     if (!(await this.pathExists(tempPath))) {
       await fs.mkdir(tempPath, { recursive: true });
@@ -110,27 +111,6 @@ export abstract class StorageService {
     } catch (err) {
       logger.error(`Error cleaning temp folder: ${err}`);
     }
-  }
-  /**
-   * Filtra la lista de archivos devolviendo únicamente los que NO están marcados como descargados en DB.
-   * @param {IFile[]} files - Archivos del DTO para verificar.
-   * @returns {Promise<IFile[]>} Archivos que necesitan ser descargados.
-   */
-  public static async getMissingFiles(files: IFile[]): Promise<IFile[]> {
-    const existingFiles = await prisma.media.findMany({
-      where: {
-        OR: files.map((file) => ({
-          id: file.id,
-          checksum: file.checksum,
-          isDownloaded: true,
-        })),
-      },
-      select: { id: true },
-    });
-
-    const existingFileIds = new Set(existingFiles.map((file) => file.id));
-
-    return files.filter((file) => !existingFileIds.has(file.id));
   }
   /**
    * Mueve un archivo del directorio temporal al destino final, con manejo de EXDEV.
@@ -185,8 +165,8 @@ export abstract class StorageService {
    */
   private static async processFile(file: IFile): Promise<IMediaFile> {
     const name = file.id + path.extname(file.name);
-    const stagePath = path.join(process.cwd(), "Media", "temp", name);
-    const localPath = path.join(process.cwd(), "Media", name);
+    const stagePath = path.join(CONFIG.MEDIA_PATH, "temp", name);
+    const localPath = path.join(CONFIG.MEDIA_PATH, name);
     const mediaError: IMediaFile = {
       id: file.id,
       filename: file.name,
@@ -215,7 +195,6 @@ export abstract class StorageService {
       return mediaError;
     }
   }
-
   /**
    * Descarga y verifica en paralelo (por chunks) una lista de archivos.
    * @param {IFile[]} files - Archivos a descargar y verificar.
@@ -249,9 +228,12 @@ export abstract class StorageService {
     }
   }
   /**
-   * Reintenta descargas que antes fallaron y actualiza el estado en DB.
+   * @description Reintenta descargas que antes fallaron y actualiza el estado en DB.
+   * @name retryFailedDownloads
+   * @static
+   * @return {void}
    */
-  public static async retryFailedDownloads() {
+  public static async retryFailedDownloads(): Promise<void> {
     try {
       const failedMedia = await prisma.media.findMany({
         where: {
@@ -278,10 +260,14 @@ export abstract class StorageService {
     }
   }
   /**
-   * Elimina archivos y registros de media que ya no son activos (huérfanos).
+   * @description Elimina archivos y registros de media que ya no son activos (huérfanos).
    * @param {string[]} activeMediaIds - IDs activos que deben mantenerse.
+   * @name removeOrphanMedia
+   * @returns {Promise<void>}
    */
-  public static async removeOrphanMedia(activeMediaIds: string[]) {
+  public static async removeOrphanMedia(
+    activeMediaIds: string[]
+  ): Promise<void> {
     try {
       if (!activeMediaIds || activeMediaIds.length === 0) {
         logger.info(
@@ -290,24 +276,22 @@ export abstract class StorageService {
         return;
       }
 
-      const whereClause = { isDownloaded: true, id: { notIn: activeMediaIds } };
-
       const orphanMedia = await prisma.media.findMany({
-        where: whereClause,
+        where: { isDownloaded: true, id: { notIn: activeMediaIds } },
         select: { id: true, localPath: true },
       });
 
       if (orphanMedia.length === 0) return;
 
-      for (const media of orphanMedia) {
+      orphanMedia.forEach(async (media) => {
         try {
-          if (media.localPath && (await Bun.file(media.localPath).exists())) {
+          if (await Bun.file(media.localPath).exists()) {
             await Bun.file(media.localPath).delete();
           }
         } catch (err) {
           logger.error(`Error deleting file for media ${media.id}: ${err}`);
         }
-      }
+      });
 
       await prisma.media.deleteMany({
         where: { id: { in: orphanMedia.map((m) => m.id) } },
@@ -319,14 +303,15 @@ export abstract class StorageService {
     }
   }
   /**
-   * Crea el directorio `logs` si no existe.
+   * @description Crea el directorio `logs` si no existe.
+   * @name createLogDirIfNotExists
+   * @static
    */
-  static createLogDirIfNotExists = async () => {
-    const logDir = path.join(process.cwd(), "logs");
+  public static createLogDirIfNotExists = async () => {
     try {
-      if (!(await this.pathExists(logDir))) {
+      if (!(await this.pathExists(CONFIG.LOGS_PATH))) {
         logger.info("Log directory does not exist. Creating...");
-        await fs.mkdir(logDir);
+        await fs.mkdir(CONFIG.LOGS_PATH);
       } else {
         logger.info("Log directory already exists.");
       }
@@ -334,6 +319,11 @@ export abstract class StorageService {
       logger.error(`Error creating log directory: ${err}`);
     }
   };
+  /**
+   * @description Obtiene información del disco: espacio libre, usado y total.
+   * @name getDiskInfo
+   * @static
+   */
   public static getDiskInfo() {
     try {
       if (process.platform === "win32") {
@@ -375,6 +365,8 @@ export abstract class StorageService {
       return { free: 0, size: 0, used: 0 };
     }
   }
+  
+
   public static async clearFilesPath(filePath: string) {
     if (!(await this.pathExists(filePath))) {
       logger.warn(`Path does not exist: ${filePath}`);
@@ -382,7 +374,7 @@ export abstract class StorageService {
     }
     try {
       const entries = await fs.readdir(filePath, { withFileTypes: true });
-      for (const entry of entries) {
+      entries.forEach(async (entry) => {
         const entryPath = path.join(filePath, entry.name);
         try {
           if (entry.isFile() || entry.isSymbolicLink()) {
@@ -394,7 +386,7 @@ export abstract class StorageService {
         } catch (err) {
           logger.error(`Error deleting ${entryPath}: ${err}`);
         }
-      }
+      });
       logger.info(`Successfully cleared files at path: ${filePath}`);
     } catch (err) {
       logger.error(`Error reading path ${filePath}: ${err}`);

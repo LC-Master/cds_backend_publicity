@@ -24,11 +24,11 @@ export interface Campaign {
 }
 
 export interface Slots {
-  am: Am[];
-  pm: Pm[];
+  am: FileDto[];
+  pm: FileDto[];
 }
 
-export interface Am {
+export interface FileDto {
   id: string;
   name: string;
   duration_seconds: number;
@@ -36,4 +36,3 @@ export interface Am {
   position: number;
 }
 
-export interface Pm extends Am {}

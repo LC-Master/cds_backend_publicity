@@ -34,7 +34,7 @@ export default abstract class TokenService {
    * @param {string} token - Token crudo a validar.
    * @returns {Promise<string|null>} El token validado o null si no es válido.
    */
-  public static async validateToken(token: string) {
+  public static async validateToken(token: string): Promise<string | null> {
     const validation = jwtSchema.safeParse(token);
 
     if (!validation.success) return null;
@@ -42,11 +42,11 @@ export default abstract class TokenService {
     return validation.data;
   }
   /**
-   * Hashea un token usando Argon2id con parámetros de seguridad.
+   * @description Hashea un token usando Argon2id con parámetros de seguridad.
    * @param {string} token - Token crudo.
    * @returns {Promise<string>} Hash seguro del token.
    */
-  private static async hashToken(token: string) {
+  private static async hashToken(token: string): Promise<string> {
     const hashedToken = await Bun.password.hash(token, {
       algorithm: "argon2id",
       memoryCost: 65536,
@@ -61,8 +61,10 @@ export default abstract class TokenService {
    * Genera, valida, hashea y persiste una API key.
    * También escribe el token crudo en `token_api.txt` (solo una vez).
    * @param {jwt} jwt - Instancia JWT para firmar el token.
+   * @description Crea una API key segura y la guarda en la base de datos.
+   * @returns {Promise<void>}
    */
-  public static async createApiKey(jwt: jwt) {
+  public static async createApiKey(jwt: jwt): Promise<void> {
     try {
       const token = await this.generateToken(jwt);
 
@@ -102,10 +104,11 @@ export default abstract class TokenService {
     }
   }
   /**
-   * Escribe el token crudo en disco en `token_api.txt`.
    * @param {string} token - Token crudo a escribir.
+   * @description Crea un archivo temporal con el token crudo en disco llamado `token_api.txt`.
+   * @returns {Promise<void>}
    */
-  private static async createFileToken(token: string) {
+  private static async createFileToken(token: string): Promise<void> {
     await Bun.write(this.pathFileToken, token);
   }
   /**

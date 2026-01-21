@@ -13,11 +13,10 @@ import { authPlugin } from "./auth.plugin";
  * Plugin de arranque que ejecuta tareas iniciales (sync, limpieza, etc.) al iniciar la app.
  */
 export const startApp = new Elysia().use(authPlugin).onStart(async function () {
-  // if (!(await TokenService.tokenApiExists())) {
-  //   await TokenService.createApiKey(startApp.decorator.jwt);
-  // }
-  // const isConnected = await connectDb();
-  // if (!isConnected) {
+  if (!(await TokenService.tokenApiExists())) {
+    await TokenService.createApiKey(startApp.decorator.jwt);
+  }
+  // if (!await connectDb()) {
   //   logger.fatal("cannot connect to database, exiting...");
   //   process.exit(1);
   // }

@@ -6,7 +6,6 @@ import { logger } from "../providers/logger.provider";
 import { SyncService } from "../services/sync.service";
 import { PlaylistService } from "../services/playlist.service";
 import { prisma } from "../providers/prisma";
-import { typeSyncEnum } from "../enums/typeSync.enum";
 let isRetrying = false;
 export const syncCrons = new Elysia()
   .use(
@@ -71,18 +70,21 @@ export const syncCrons = new Elysia()
           const syncState = await prisma.syncState.findUnique({
             where: { id: 1 },
           });
-          if (!syncState?.syncing) {
-            const dto = await prisma.playlistData.findUnique({
-              where: { id: 1 },
+          if (syncState?.syncing) {
+            logger.info({
+              message: "Playlist generation skipped: Sync in progress",
             });
-            if (dto) {
-              await PlaylistService.generate(JSON.parse(dto.rawJson));
-              syncEventInstance.emit("playlist:generated", true);
-              logger.info({
-                message: "Playlist generated successfully",
-                time: new Date().toLocaleString(),
-              });
-            }
+          }
+          const dto = await prisma.playlistData.findUnique({
+            where: { id: 1 },
+          });
+          if (dto) {
+            await PlaylistService.generate(JSON.parse(dto.rawJson));
+            syncEventInstance.emit("playlist:generated", true);
+            logger.info({
+              message: "Playlist generated successfully",
+              time: new Date().toLocaleString(),
+            });
           }
         } catch (err) {
           logger.error({ message: `Playlist generation failed: ${err}` });

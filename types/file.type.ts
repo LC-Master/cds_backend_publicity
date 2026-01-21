@@ -3,8 +3,6 @@ import { mediaStatusEnum } from "../src/enums/mediaStatus.enum";
 export type IFile = {
   id: string;
   name: string;
-  duration_seconds?: number;
-  position?: number;
   checksum: string;
 };
 

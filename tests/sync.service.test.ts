@@ -96,7 +96,7 @@ describe("SyncService", () => {
 
     const originalTransaction = prisma.$transaction;
     const originalUpsert = prisma.syncState.upsert;
-    const originalFilesExist = StorageService.filesExist;
+    const originalFilesExist = StorageService.getMissingFiles;
     const originalDownload = StorageService.downloadAndVerifyFiles;
     const originalClean = StorageService.cleanTempFolder;
     const originalSaveMany = MediaRepository.saveMany;

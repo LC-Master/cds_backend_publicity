@@ -15,14 +15,9 @@ import { prisma } from "../providers/prisma";
 import { MediaRepository } from "../repository/media.repository";
 import { PlaylistDataRepository } from "../repository/playlistData.repository";
 import { StorageService } from "./storage.service";
-
-function extractMediaList(dto: ISnapshotDto) {
-  const mediaList = dto.data.campaigns
-    .map((campaign) => [...campaign.slots.am, ...campaign.slots.pm])
-    .flat();
-
-  return mediaList ? mediaList : undefined;
-}
+import { extractMediaList } from "@src/lib/campaignHelpers";
+import { IFile } from "../../types/file.type";
+import { MediaService } from "./media.service";
 
 /**
  * @class SyncService
@@ -33,56 +28,71 @@ function extractMediaList(dto: ISnapshotDto) {
  * aunque la versión del DTO no haya cambiado.
  */
 export abstract class SyncService {
-  private static readonly SYNC_TTL_HOURS = CONFIG.SYNC_TTL_HOURS;
-
   /**
-   * Intenta iniciar una sincronización en la DB, respetando TTL y versión.
-   * @param {string} incomingVersion - Versión del DTO entrante.
-   * @returns {Promise<{ canSync: boolean; type: typeSyncEnum }>} Indica si se puede sincronizar y el tipo.
+   * @author Francisco A. Rojas F.
+   * @description
+   * Intenta iniciar la transacción de sincronización.
+   * Implementa una lógica de aplanado (Early Return) para validar:
+   * 1. Existencia de estado inicial.
+   * 2. Bloqueo por proceso en curso (TTL).
+   * 3. Integridad de la versión del DTO vs Datos persistidos.
+   * * @param {string} incomingVersion - Versión del DTO proveniente del CMS.
+   * @returns {Promise<{ canSync: boolean; type: typeSyncEnum }>}
    */
-  static async tryStartSync(
+  public static async tryStartSync(
     incomingVersion: string
   ): Promise<{ canSync: boolean; type: typeSyncEnum }> {
     const now = new Date();
+
     return prisma.$transaction(async (tx) => {
       const row = await tx.syncState.findUnique({ where: { id: 1 } });
       const playlistData = await tx.playlistData.findUnique({
         where: { id: 1 },
       });
-      if (row) {
-        if (row.syncing && row.syncStartedAt) {
-          const diffHours =
-            (now.getTime() - row.syncStartedAt.getTime()) / 1000 / 60 / 60;
-          if (diffHours < this.SYNC_TTL_HOURS)
-            return { canSync: false, type: typeSyncEnum.Syncing };
+
+      if (row?.syncing && row.syncStartedAt) {
+        const diffHours =
+          (now.getTime() - row.syncStartedAt.getTime()) / 1000 / 60 / 60;
+
+        if (diffHours < CONFIG.SYNC_TTL_HOURS) {
+          logger.info({
+            message: "Sync aborted: Process already in progress",
+            startedAt: row.syncStartedAt,
+            elapsedHours: diffHours.toFixed(2),
+          });
+          return { canSync: false, type: typeSyncEnum.Syncing };
         }
 
-        if (row.syncVersion === incomingVersion) {
-          if (!playlistData) {
-            logger.warn(
-              "SyncState reports noChange but PlaylistData is missing. Proceeding to sync to recover missing data."
-            );
-            return { canSync: true, type: typeSyncEnum.newSync };
-          }
-          return { canSync: false, type: typeSyncEnum.noChange };
-        }
-        
-        await tx.syncState.update({
-          where: { id: 1 },
-          data: {
-            syncing: true,
-            syncStartedAt: now,
-            syncVersion: incomingVersion,
-            status: syncStateEnum.InProgress,
-            errorMessage: null,
-          },
-        });
-
-        return { canSync: true, type: typeSyncEnum.newSync };
+        logger.warn(
+          `Sync TTL expired (${diffHours.toFixed(2)}h). Overriding stale sync.`
+        );
       }
 
-      await tx.syncState.create({
-        data: {
+      const hasNoChanges = row?.syncVersion === incomingVersion;
+      if (hasNoChanges && playlistData) {
+        logger.info(
+          `Sync skipped: Version ${incomingVersion} already up to date.`
+        );
+        return { canSync: false, type: typeSyncEnum.noChange };
+      }
+
+      if (!playlistData && hasNoChanges) {
+        logger.warn(
+          "Version match but PlaylistData is missing. Forcing recovery sync."
+        );
+      }
+
+      const isFirstTime = !row;
+      await tx.syncState.upsert({
+        where: { id: 1 },
+        update: {
+          syncing: true,
+          syncStartedAt: now,
+          syncVersion: incomingVersion,
+          status: syncStateEnum.InProgress,
+          errorMessage: null,
+        },
+        create: {
           id: 1,
           syncing: true,
           syncStartedAt: now,
@@ -91,10 +101,17 @@ export abstract class SyncService {
         },
       });
 
+      logger.info({
+        message: isFirstTime
+          ? "First-time sync initiated"
+          : "Sync state updated to InProgress",
+        version: incomingVersion,
+        type: isFirstTime ? "INITIAL_SYNC" : "UPDATE_SYNC",
+      });
+
       return { canSync: true, type: typeSyncEnum.newSync };
     });
   }
-
   /**
    * Marca la sincronización como finalizada en la DB (éxito o fallo).
    * @param {string} version - Versión que se guardará en el estado de sync.
@@ -122,7 +139,7 @@ export abstract class SyncService {
   }
   /**
    * Ejecuta la sincronización completa: descarga DTO, verifica cambios, descarga archivos y guarda versión.
-   * @returns {Promise<  ISnapshotDto   | null>} Resultado de la sincronización o null si no procede.
+   * @returns {Promise<ISnapshotDto | null>} Resultado de la sincronización o null si no procede.
    */
   static async syncData(): Promise<ISnapshotDto | null> {
     const dto = await fetchDto<ISnapshotDto>(CONFIG.CMS_ROUTE_SNAPSHOT);
@@ -135,9 +152,16 @@ export abstract class SyncService {
       logger.info("Sync already in progress. Aborting new sync attempt.");
       return null;
     }
+    let forcedMissingIds: string[] = [];
     if (!canSync.canSync && canSync.type === typeSyncEnum.noChange) {
-      logger.info("No changes detected in DTO version. Sync not required.");
-      return dto;
+      forcedMissingIds = await MediaService.checkPhysicalMedia(dto);
+      if (forcedMissingIds.length === 0) {
+        logger.info("No changes detected in DTO version. Sync not required.");
+        return dto;
+      }
+      logger.warn(
+        `Physical media integrity check failed for ${forcedMissingIds.length} files. Forcing re-download.`
+      );
     }
 
     try {
@@ -149,7 +173,11 @@ export abstract class SyncService {
 
       logger.info(`Found ${mediaList.length} media entries in DTO.`);
 
-      const syncedFiles = await StorageService.getMissingFiles(mediaList);
+      const syncedFiles = await MediaService.getMissingFiles(
+        mediaList,
+        forcedMissingIds
+      );
+
       logger.info(
         `After checking DB, ${syncedFiles.length} files need to be downloaded.`
       );
@@ -162,11 +190,11 @@ export abstract class SyncService {
       logger.info(
         `Sync completed: ${savedFiles.length} media files processed.`
       );
+      await PlaylistDataRepository.saveVersion(dto);
     } catch (err: { message: string } | any) {
       logger.error(`Sync failed services: ${err.message}`);
       return null;
     } finally {
-      await PlaylistDataRepository.saveVersion(dto);
       await this.finishSync(dto.meta.version);
       await StorageService.cleanTempFolder();
     }
