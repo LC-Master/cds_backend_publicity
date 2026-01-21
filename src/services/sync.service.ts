@@ -182,12 +182,12 @@ export abstract class SyncService {
     const newStatus =
       row?.status === syncStateEnum.InProgress
         ? syncStateEnum.Failed
-        : row?.status ?? syncStateEnum.Completed;
+        : (row?.status ?? syncStateEnum.Completed);
 
     const newErrorMessage =
       row?.status === syncStateEnum.InProgress
         ? "Sync interrupted due to server restart"
-        : row?.errorMessage ?? null;
+        : (row?.errorMessage ?? null);
 
     try {
       const result = await prisma.syncState.upsert({
@@ -292,14 +292,14 @@ export abstract class SyncService {
       });
 
       await PlaylistDataRepository.saveVersion(dto);
+      await this.finishSync(dto.meta.version);
+      return dto;
     } catch (err: { message: string } | any) {
       logger.error({ message: `Sync failed services`, error: err.message });
+      await this.finishSync(dto.meta.version, err.message);
       return null;
     } finally {
-      await this.finishSync(dto.meta.version);
       await StorageService.cleanTempFolder();
     }
-
-    return dto;
   }
 }
