@@ -5,6 +5,7 @@
  * Documentación en español; no se altera la lógica.
  */
 import { Campaign, FileDto, ISnapshotDto } from "../../types/dto.type";
+import { IPlaylistData } from "../../types/playlist.type";
 import path from "path";
 import fs from "fs/promises";
 import { logger } from "../providers/logger.provider";
@@ -22,7 +23,7 @@ export abstract class PlaylistService {
    * @param {ISnapshotDto} dto - DTO sincronizado con campañas y slots.
    * @returns {{am: any[], pm: any[]}} Estructura de playlist creada.
    */
-  static async generate(dto: ISnapshotDto): Promise<{ am: any[]; pm: any[] }> {
+  static async generate(dto: ISnapshotDto): Promise<IPlaylistData> {
     const now = new Date();
     const inSixHours = new Date(now.getTime() + (6 * 60 * 60 * 1000));
     const playlistPath = CONFIG.PLAYLIST_PATH;
@@ -33,7 +34,7 @@ export abstract class PlaylistService {
       return start <= inSixHours && end >= now;
     });
 
-    const place_holder = dto.data.place_holder ? { id: dto.data.place_holder.id, fileType: dto.data.place_holder.name.split(".").pop() } : null;
+    const place_holder = dto.data.place_holder ? { id: dto.data.place_holder.id, fileType: dto.data.place_holder.name.split(".").pop() || "unknown" } : null;
     const activeMediaIds = extractMediaList(dto).map((slot) => slot.id);
 
     const mediaItems = (slot: FileDto, campaign: Campaign) => ({
@@ -41,14 +42,8 @@ export abstract class PlaylistService {
       fileType: slot.name.split(".").pop() || "mp4",
       start_at: campaign.start_at,
       end_at: campaign.end_at,
-    })
-
-    const amPlaylist = activeCampaigns.flatMap((campaign) =>
-      campaign.slots.am.map((slot) => mediaItems(slot, campaign))
-    );
-    const pmPlaylist = activeCampaigns.flatMap((campaign) =>
-      campaign.slots.pm.map((slot) => mediaItems(slot, campaign))
-    );
+      position: slot.position
+    });
 
     const media = await MediaRepository.getFilesDownloaded();
 
@@ -60,15 +55,29 @@ export abstract class PlaylistService {
 
     const mediaIds = new Set(media.map((m) => m.id));
 
-    const filteredAm = amPlaylist.filter((item) => mediaIds.has(item.id));
-    const filteredPm = pmPlaylist.filter((item) => mediaIds.has(item.id));
+    const campaigns = activeCampaigns.map((campaign) => {
+      const am = campaign.slots.am
+        .map((slot) => mediaItems(slot, campaign))
+        .filter((item) => mediaIds.has(item.id));
+      const pm = campaign.slots.pm
+        .map((slot) => mediaItems(slot, campaign))
+        .filter((item) => mediaIds.has(item.id));
 
-    if (filteredAm.length === 0 && filteredPm.length === 0) {
+      return {
+        id: campaign.id,
+        am,
+        pm,
+      };
+    });
+
+    const hasContent = campaigns.some((c) => c.am.length > 0 || c.pm.length > 0);
+
+    if (!hasContent) {
       if (!(await StorageService.pathExists(playlistPath))) {
         await fs.mkdir(playlistPath);
       }
 
-      const jsonContent = { am: [], pm: [], place_holder: place_holder_downloaded ? place_holder : null };
+      const jsonContent: IPlaylistData = { campaigns: [], place_holder: place_holder_downloaded ? place_holder : null };
 
       await Bun.write(
         path.join(playlistPath, "playlist.json"),
@@ -87,7 +96,7 @@ export abstract class PlaylistService {
       await fs.mkdir(playlistPath);
     }
 
-    const jsonContent = { am: filteredAm, pm: filteredPm, place_holder: place_holder_downloaded ? place_holder : null };
+    const jsonContent: IPlaylistData = { campaigns, place_holder: place_holder_downloaded ? place_holder : null };
 
     await Bun.write(
       path.join(playlistPath, "playlist.json"),

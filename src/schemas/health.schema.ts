@@ -10,14 +10,15 @@ export const healthSchema = z.object({
         used: z.number(),
     }),
     start_at: z
-        .coerce
         .date()
         .nullable()
+        .transform((d) => d ? d.toISOString() : null)
         .describe('sync start timestamp'),
+
     end_at: z
-        .coerce
         .date()
         .nullable()
+        .transform((d) => d ? d.toISOString() : null)
         .describe('sync end timestamp'),
     syncState: z.enum(healthEnum),
     dtoChanged: z.boolean(),
@@ -47,13 +48,15 @@ export const healthSchema = z.object({
         })
     ).nullable(),
     reported_at: z
-        .coerce
         .date()
+        .transform((d) => d.toISOString())
         .describe('last reported timestamp'),
 });
 
-export type IHealthResponse = z.infer<typeof healthSchema>;
+export type IHealthInput = z.input<typeof healthSchema>;
 
-export type IHealth = Omit<IHealthResponse, "mediaError"> & {
+export type IHealthOutput = z.output<typeof healthSchema>;
+
+export type IHealth = Omit<IHealthInput, "mediaError"> & {
     mediaError: IFile[] | null;
 };

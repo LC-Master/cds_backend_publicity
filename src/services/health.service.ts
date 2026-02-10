@@ -12,7 +12,6 @@ import { fetchAuth } from "@src/providers/fetchAuth";
 import { healthEnum } from "@src/enums/health.enum";
 import { healthSchema, IHealth } from "@src/schemas/health.schema";
 import crypto from 'node:crypto';
-import { V4 } from "paseto";
 
 export abstract class HealthService {
   /**
