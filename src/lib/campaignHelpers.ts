@@ -9,7 +9,7 @@ import { IFile } from "../../types/file.type";
 export function extractMediaList(dto: ISnapshotDto): IFile[] {
   if (!dto?.data?.campaigns) return [];
 
-  return dto.data.campaigns.flatMap((campaign) => {
+  const mediaList: IFile[] = dto.data.campaigns.flatMap((campaign) => {
     const am = campaign.slots.am;
     const pm = campaign.slots.pm;
 
@@ -19,4 +19,14 @@ export function extractMediaList(dto: ISnapshotDto): IFile[] {
       checksum: slot.checksum,
     }));
   });
+
+  if (dto.data.place_holder) {
+    mediaList.push({ name: dto.data.place_holder.name, id: dto.data.place_holder.id, checksum: dto.data.place_holder.checksum });
+  }
+
+  const uniqueMediaList = mediaList.filter((media, index, self) =>
+    index === self.findIndex((m) => m.id === media.id && m.name === media.name && m.checksum === media.checksum)
+  );
+
+  return uniqueMediaList as IFile[];
 }

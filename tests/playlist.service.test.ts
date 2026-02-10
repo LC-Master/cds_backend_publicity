@@ -30,7 +30,7 @@ describe("PlaylistService", () => {
     const dto: ISnapshotDto = {
       meta: { version: "hash-123", generated_at: new Date() },
       data: {
-        center_id: "center",
+        store_id: "center",
         campaigns: [
           {
             id: "c1",

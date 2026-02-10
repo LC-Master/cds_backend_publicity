@@ -20,10 +20,9 @@ import { apiDoc } from "./routes/openDoc.route";
 import { authMiddleware } from "./middlewares/auth.middleware";
 import { startApp } from "./plugin/startApp.plugin";
 import { authRoute } from "./routes/auth.route";
-
 export const app = new Elysia({ prefix: "/api" })
   .use(apiDoc)
-  .use(authPlugin)
+  .use(mediaRoute)
   .use(startApp)
   .use(
     cors({
@@ -32,12 +31,12 @@ export const app = new Elysia({ prefix: "/api" })
     })
   )
   .use(logMiddleware)
+  .use(forceRoute)
+  .use(authPlugin)
   .use(healthRoute)
   .use(eventsRoute)
   .use(authMiddleware)
   .use(authRoute)
-  .use(mediaRoute)
-  .use(forceRoute)
   .use(playlistRoute)
   .use(syncCrons)
   .onError(({ code, status }) => {

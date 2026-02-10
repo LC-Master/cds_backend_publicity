@@ -9,14 +9,18 @@ import { CONFIG } from "@src/config/config";
 import { ISnapshotDto } from "../../types/dto.type";
 import { syncStateEnum } from "../enums/syncState.enum";
 import { typeSyncEnum } from "../enums/typeSync.enum";
-import { fetchDto } from "../providers/fetchDto";
+import { fetchAuth } from "../providers/fetchAuth";
 import { logger } from "../providers/logger.provider";
 import { prisma } from "../providers/prisma";
+import { dto as snapshotSchema } from "../schemas/dto.schema";
 import { MediaRepository } from "../repository/media.repository";
 import { PlaylistDataRepository } from "../repository/playlistData.repository";
 import { StorageService } from "./storage.service";
 import { extractMediaList } from "@src/lib/campaignHelpers";
 import { MediaService } from "./media.service";
+import { parseSchema } from "@src/lib/parseSchema";
+import { HealthService } from "./health.service";
+import { healthEnum } from "@src/enums/health.enum";
 
 /**
  * @class SyncService
@@ -227,11 +231,18 @@ export abstract class SyncService {
    * @returns {Promise<ISnapshotDto | null>} Resultado de la sincronización o null si no procede.
    */
   public static async syncData(): Promise<ISnapshotDto | null> {
-    const dto = await fetchDto<ISnapshotDto>(CONFIG.CMS_ROUTE_SNAPSHOT);
-    if (!dto) {
+    const start_at = new Date();
+    logger.info({
+      message: "Sync process started",
+      time: start_at.toLocaleString(),
+    });
+    this.reportHealth(healthEnum.SYNCING, start_at, null);
+    const data = await fetchAuth(CONFIG.CMS_ROUTE_SNAPSHOT);
+    if (!data) {
       logger.warn("Failed to fetch DTO from CMS.");
       throw new Error("Failed to fetch DTO");
     }
+    const dto = parseSchema<ISnapshotDto>(data, snapshotSchema);
     const canSync = await this.tryStartSync(dto.meta.version);
     if (!canSync.canSync && canSync.type === typeSyncEnum.Syncing) {
       logger.info("Sync already in progress. Aborting new sync attempt.");
@@ -242,6 +253,7 @@ export abstract class SyncService {
       forcedMissingIds = await MediaService.checkPhysicalMedia(dto);
       if (forcedMissingIds.length === 0) {
         logger.info("No changes detected in DTO version. Sync not required.");
+        this.reportHealth(healthEnum.SUCCESS, start_at, new Date());
         return dto;
       }
       logger.warn(
@@ -290,16 +302,22 @@ export abstract class SyncService {
         message: "Sync Completed Successfully",
         version: dto.meta.version,
       });
-
       await PlaylistDataRepository.saveVersion(dto);
       await this.finishSync(dto.meta.version);
+      this.reportHealth(healthEnum.SUCCESS, start_at, new Date());
       return dto;
     } catch (err: { message: string } | any) {
       logger.error({ message: `Sync failed services`, error: err.message });
-      await this.finishSync(dto.meta.version, err.message);
+      this.reportHealth(healthEnum.FAILED, start_at, new Date());
+      await this.finishSync(dto?.meta?.version ?? 'unknown', err.message);
       return null;
     } finally {
       await StorageService.cleanTempFolder();
     }
   }
+  private static reportHealth(status: healthEnum, start_at: Date | null, end_at: Date | null): void {
+    HealthService.isHealthy(status, start_at, end_at).catch(err =>
+      logger.error({ message: `Health report failed for ${status}`, error: err.message })
+    );
+  };
 }

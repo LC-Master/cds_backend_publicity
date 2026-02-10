@@ -21,6 +21,8 @@ model SyncState {
   status        String?
   errorMessage  String?
   createdAt     DateTime  @default(now())
+  communicationKey String?   @db.NVarChar(255)
+  communicationKeyWasSended Boolean @default(false)
   updatedAt     DateTime  @updatedAt
 }
 
@@ -33,7 +35,7 @@ model PlaylistData {
 
 model Media {
   id           String   @id @default(uuid())
-  filename     String   @unique
+  filename     String   
   checksum     String
   errorCount   Int?
   status       String   @default("pending")

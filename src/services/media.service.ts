@@ -20,8 +20,8 @@ export abstract class MediaService {
 
     files = files
       ? files
-          .filter((filename) => "temp" !== filename)
-          .map((filename) => filename.split(".")[0])
+        .filter((filename) => "temp" !== filename)
+        .map((filename) => filename.split(".")[0])
       : [];
 
     const missingFiles = mediaListIds.filter((id) => !files.includes(id));

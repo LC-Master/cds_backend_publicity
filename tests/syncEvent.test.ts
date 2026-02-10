@@ -3,7 +3,7 @@ import { syncEventInstance } from "../src/event/syncEvent";
 
 const minimalDto = {
   meta: { version: "v1", generated_at: new Date() },
-  data: { center_id: "x", campaigns: [] },
+  data: { store_id: "x", campaigns: [] },
 };
 
 describe("syncEvent", () => {

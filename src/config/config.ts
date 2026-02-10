@@ -7,6 +7,8 @@ const APP_BASE = path.resolve(Bun.env.APP_BASE || process.cwd());
 
 const config: Env = {
   APP_BASE,
+  PASETO_PRIVATE_KEY: Bun.env.PASETO_PRIVATE_KEY,
+  PASETO_PUBLIC_KEY: Bun.env.PASETO_PUBLIC_KEY,
   MEDIA_PATH: Bun.env.MEDIA_PATH || path.join(APP_BASE, "Media"),
   PLAYLIST_PATH: Bun.env.PLAYLIST_PATH || path.join(APP_BASE, "Playlist"),
   LOGS_PATH: Bun.env.LOGS_PATH || path.join(APP_BASE, "Logs"),

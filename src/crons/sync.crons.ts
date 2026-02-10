@@ -1,11 +1,14 @@
 import Elysia from "elysia";
 import cron from "@elysiajs/cron";
+import { dto as snapshotSchema } from "../schemas/dto.schema";
 import { syncEventInstance } from "../event/syncEvent";
 import { StorageService } from "../services/storage.service";
 import { logger } from "../providers/logger.provider";
 import { SyncService } from "../services/sync.service";
 import { PlaylistService } from "../services/playlist.service";
 import { prisma } from "../providers/prisma";
+import { parseSchema } from "@src/lib/parseSchema";
+import { ISnapshotDto } from "../../types/dto.type";
 let isRetrying = false;
 export const syncCrons = new Elysia()
   .use(
@@ -79,7 +82,8 @@ export const syncCrons = new Elysia()
             where: { id: 1 },
           });
           if (dto) {
-            await PlaylistService.generate(JSON.parse(dto.rawJson));
+            const parsedDto = parseSchema<ISnapshotDto>(JSON.parse(dto.rawJson), snapshotSchema);
+            await PlaylistService.generate(parsedDto);
             syncEventInstance.emit("playlist:generated", true);
             logger.info({
               message: "Playlist generated successfully",

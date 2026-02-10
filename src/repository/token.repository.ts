@@ -11,7 +11,7 @@ export abstract class TokenRepository {
    * @returns {Promise<string|null>} Hash almacenado o null.
    */
   public static async get() {
-    const token = await prisma.apiKeY.findUnique({ where: { id: 1 } });
+    const token = await prisma.apiKey.findUnique({ where: { id: 1 } });
     return token?.key || null;
   }
   /**
@@ -19,7 +19,7 @@ export abstract class TokenRepository {
    * @returns {Promise<boolean>} True si existe.
    */
   public static async exists() {
-    const token = await prisma.apiKeY.findUnique({ where: { id: 1 } });
+    const token = await prisma.apiKey.findUnique({ where: { id: 1 } });
     return !!token;
   }
   /**
@@ -28,7 +28,7 @@ export abstract class TokenRepository {
    * @returns {{ key: string }} Objeto con la clave guardada.
    */
   public static async save(hashedToken: string) {
-    const result = await prisma.apiKeY.upsert({
+    const result = await prisma.apiKey.upsert({
       where: { id: 1 },
       create: { key: hashedToken },
       update: { key: hashedToken },

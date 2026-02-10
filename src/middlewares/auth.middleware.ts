@@ -18,6 +18,11 @@ export const authMiddleware = new Elysia()
   }))
   .onBeforeHandle({ as: "global" }, async ({ jwt, bearer, request, ip }) => {
     logger.info(`Incoming request to ${request.url} from ${ip}`);
+    if (new URL(request.url).pathname.startsWith("/api/media")) {
+      logger.info(`Skipping auth for media route: ${request.url}`);
+      return;
+    }
+
     if (!bearer) {
       logger.warn(`Unauthorized access attempt to ${request.url} from ${ip}`);
       throw status(401, { error: "Unauthorized" });

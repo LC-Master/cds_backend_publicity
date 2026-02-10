@@ -1,41 +1,33 @@
 import { z } from "zod";
+import { campaign } from "./campaign.schema";
+import { mediaSchema } from "./media.schema";
 
-export const dto = z.object({
-  meta: z.object({
-    version: z.string(),
-    generated_at: z.coerce.date(),
-  }),
-  data: z.object({
-    center_id: z.uuid(),
-    campaigns: z.array(
-      z.object({
-        id: z.uuid(),
-        title: z.string(),
-        department: z.string(),
-        agreement: z.string(),
-        start_at: z.coerce.date(),
-        end_at: z.coerce.date(),
-        slots: z.object({
-          am: z.array(
-            z.object({
-              id: z.uuid(),
-              name: z.string(),
-              checksum: z.string().regex(/^[a-f0-9]{32}$/i),
-              duration_seconds: z.number(),
-              position: z.number(),
-            })
-          ),
-          pm: z.array(
-            z.object({
-              id: z.uuid(),
-              name: z.string(),
-              checksum: z.string().regex(/^[a-f0-9]{32}$/i),
-              duration_seconds: z.number(),
-              position: z.number(),
-            })
-          ),
-        }),
-      })
-    ),
-  }),
-});
+export const dto = z
+  .object({
+    meta: z
+      .object({
+        api_version: z
+          .string()
+          .optional()
+          .describe("API version of the snapshot"),
+        version: z
+          .string()
+          .describe("Version of the snapshot, e.g., a timestamp or incremental number"),
+        generated_at: z
+          .coerce
+          .date()
+          .describe("Timestamp when the snapshot was generated"),
+      }),
+    data: z
+      .object({
+        store_id: z.coerce
+          .number()
+          .int()
+          .positive()
+          .describe("Unique identifier for the store"),
+        place_holder: mediaSchema.optional(),
+        campaigns: z.array(
+          campaign
+        ),
+      }),
+  });

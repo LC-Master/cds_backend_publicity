@@ -4,7 +4,7 @@ import { typeSyncEnum } from "../src/enums/typeSync.enum";
 const dto = {
   meta: { version: "v1", generated_at: new Date() },
   data: {
-    center_id: "0bd1a5f3-23e1-4f2b-9b1e-1f8c6d2c0a11",
+    store_id: "0bd1a5f3-23e1-4f2b-9b1e-1f8c6d2c0a11",
     campaigns: [
       {
         id: "d290f1ee-6c54-4b01-90e6-d701748f0851",

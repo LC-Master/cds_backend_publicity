@@ -7,7 +7,7 @@ const validDto = {
     generated_at: "2026-01-01T00:00:00Z",
   },
   data: {
-    center_id: "0bd1a5f3-23e1-4f2b-9b1e-1f8c6d2c0a11",
+    store_id: "0bd1a5f3-23e1-4f2b-9b1e-1f8c6d2c0a11",
     campaigns: [
       {
         id: "12b4c6d9-0f9a-4e33-b7c2-6a3b2e8b9d31",

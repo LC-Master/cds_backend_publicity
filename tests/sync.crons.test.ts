@@ -37,7 +37,7 @@ describe("syncCrons", () => {
 
     const emit = mock(() => true);
     const syncData = mock(async () => ({
-      dto: { meta: { version: "v1", generated_at: new Date() }, data: { center_id: "test-center", campaigns: [] } },
+      dto: { meta: { version: "v1", generated_at: new Date() }, data: { store_id: "test-center", campaigns: [] } },
       type: typeSyncEnum.noChange,
     }));
     const generate = mock(async () => ({

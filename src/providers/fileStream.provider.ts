@@ -12,7 +12,7 @@ import { CONFIG } from "@src/config/config";
  * @param {string} id - ID de media a descargar.
  * @returns {Promise<Response>} Response del fetch con el contenido.
  */
-export default async function fileStreamProvider(id: string) {
+export default async function fileStreamProvider(id: string): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), ms("30s"));
   try {
@@ -29,7 +29,16 @@ export default async function fileStreamProvider(id: string) {
     clearTimeout(timeoutId);
 
     if (!res.ok) {
-      throw new Error(`Auth Error: ${res.status} - Verifica el Token en .env`);
+      switch (res.status) {
+        case 404:
+          throw new Error(`Archivo con ID ${id} no encontrado en CMS (404)`);
+        case 500:
+          throw new Error(`Error interno del CMS al descargar ID ${id} (500)`);
+        case 403:
+          throw new Error(`Acceso denegado al descargar ID ${id} (403) - Revisa permisos de API`);
+        default:
+          throw new Error(`Error al descargar ID ${id} - Status: ${res.status}`);
+      }
     }
 
     const contentType = res.headers.get("content-type");

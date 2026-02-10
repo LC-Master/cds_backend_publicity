@@ -1,15 +1,19 @@
+import { IFile } from "./file.type";
+
 export interface ISnapshotDto {
   meta: Meta;
   data: Data;
 }
 
 export interface Meta {
+  api_version?: string;
   version: string;
   generated_at: Date;
 }
 
 export interface Data {
-  center_id: string;
+  store_id: string;
+  place_holder?: IFile;
   campaigns: Campaign[];
 }
 

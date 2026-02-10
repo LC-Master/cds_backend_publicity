@@ -10,6 +10,11 @@ import { SseTokenService } from "@src/services/sse-token.service";
 import Elysia, { t } from "elysia";
 
 export const authRoute = new Elysia({
+  cookie: {
+    secrets: [Bun.env.API_KEY_CMS],
+    sign: true,
+    secure: true,
+  },
   detail: {
     parameters: [
       {
@@ -25,10 +30,11 @@ export const authRoute = new Elysia({
   .use(authPlugin)
   .get(
     "/auth/login/device",
-    ({ status }) => {
+    async ({ status, cookie: { auth } }) => {
       try {
-        const token = SseTokenService.generate();
-        return status(201, { token });
+        const token = await SseTokenService.generate();
+        auth.set({ httpOnly: true, secure: true, expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), value: token });
+        return status(201, { message: 'created' });
       } catch (err) {
         logger.error({
           err,
@@ -41,11 +47,10 @@ export const authRoute = new Elysia({
       response: {
         201: t.Object(
           {
-            token: t.String({
-              format: "uuid",
-              $id: "token",
-              examples: ["123e4567-e89b-12d3-a456-426614174000"],
-              description: "Token de autenticación para el SSE",
+            message: t.String({
+              $id: "pasetoToken",
+              examples: ["created"],
+              description: "Mensaje de éxito al generar el token de SSE",
             }),
           },
           {

@@ -7,25 +7,29 @@ import { SyncService } from "@src/services/sync.service";
 import TokenService from "@src/services/token.service";
 import Elysia from "elysia";
 import { authPlugin } from "./auth.plugin";
+import { SseTokenService } from "@src/services/sse-token.service";
 /**
  * @module Start App Plugin
  * @description
  * Plugin de arranque que ejecuta tareas iniciales (sync, limpieza, etc.) al iniciar la app.
  */
 export const startApp = new Elysia().use(authPlugin).onStart(async function () {
+  await SseTokenService.bootstrapSecurity();
   if (!(await TokenService.tokenApiExists())) {
-  await TokenService.createApiKey(startApp.decorator.jwt);
+    await TokenService.createApiKey(startApp.decorator.jwt);
   }
   if (!await connectDb()) {
     logger.fatal("cannot connect to database, exiting...");
     process.exit(1);
   }
   await StorageService.createLogDirIfNotExists();
+
   await StorageService.cleanTempFolder();
 
   await SyncService.checkSyncInStartup();
 
   await StorageService.retryFailedDownloads();
+
   try {
     const result = await SyncService.syncData();
     if (result) {

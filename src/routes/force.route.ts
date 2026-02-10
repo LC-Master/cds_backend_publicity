@@ -1,12 +1,14 @@
 import Elysia, { status, t } from "elysia";
+import bearer from "@elysiajs/bearer";
 import { syncEventInstance } from "../event/syncEvent";
 import { logger } from "../providers/logger.provider";
 import { PlaylistService } from "../services/playlist.service";
 import { SyncService } from "../services/sync.service";
-import { typeSyncEnum } from "../enums/typeSync.enum";
-import { authPlugin } from "@src/plugin/auth.plugin";
 import TokenService from "@src/services/token.service";
 import { Unauthorized } from "@src/schemas/Unauthorized.schema";
+import { V4 } from "paseto";
+import { prisma } from "@src/providers/prisma";
+import { authPlugin } from "@src/plugin/auth.plugin";
 
 export const forceRoute = new Elysia({
   prefix: "/sync",
@@ -23,6 +25,29 @@ export const forceRoute = new Elysia({
   },
 })
   .use(authPlugin)
+  .use(bearer())
+  .onBeforeHandle(async ({ bearer }) => {
+    try {
+      if (!bearer) {
+        throw status(401, { error: "Unauthorized" });
+      }
+      const syncState = await prisma.syncState.findUnique({ where: { id: 1 } });
+      if (!syncState?.communicationKey) {
+        throw status(401, { error: "Unauthorized" });
+      }
+      const publicKeyBuffer = Buffer.from(syncState.communicationKey, 'hex');
+
+      const payload = await V4.verify(bearer, publicKeyBuffer, {
+        complete: true,
+      });
+      if (!payload) {
+        throw status(401, { error: "Unauthorized" });
+      }
+    } catch (err) {
+      logger.warn({ message: "Unauthorized access attempt to force route", error: err });
+      throw status(401, { error: "Unauthorized" });
+    }
+  })
   .post(
     "/force",
     async ({ body }) => {
@@ -30,7 +55,6 @@ export const forceRoute = new Elysia({
       logger.info({ message: "Force sync requested", force });
       if (!force)
         throw status(400, { error: "Parámetro force debe ser verdadero" });
-      // Run sync in background
       (async () => {
         try {
           const result = await SyncService.syncData();

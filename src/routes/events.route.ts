@@ -23,10 +23,9 @@ import { Unauthorized } from "@src/schemas/Unauthorized.schema";
  */
 export const eventsRoute = new Elysia().get(
   "/events",
-  ({ query, status }) => {
-    const { token } = query;
+  ({ status, cookie: { auth } }) => {
 
-    if (!token || !SseTokenService.validate(token)) {
+    if (!auth || !SseTokenService.validate(auth.value)) {
       throw status(401, { error: "Invalido o faltante SSE token" });
     }
 
@@ -45,7 +44,7 @@ export const eventsRoute = new Elysia().get(
               event: "ping",
               controller,
             });
-          }, ms("24s"));
+          }, ms("22s"));
 
           const onDtoUpdated = () => {
             sse({
@@ -114,21 +113,12 @@ export const eventsRoute = new Elysia().get(
         }
       ),
     },
-    query: t.Object(
-      {
-        token: t.String({
-          title: "SSE Auth Token",
-          error: "Invalido o Faltante SSE token",
-          description: "Token de autenticación para el SSE",
-          examples: ["2|f1a8e4b-3c4d-5e6f-7g8h-9i0jklmnopqrst"],
-        }),
-      },
-      {
-        title: "SSE Token Query",
-        description: "Query parameters for SSE Auth",
-        examples: [{ token: "?token=tu_api_key" }],
-      }
-    ),
+    cookie: t.Cookie({
+      auth: t.String({
+        description: "Token de autenticación para SSE",
+        examples: ["2|f1a8e4b-3c4d-5e6f-7g8h-9i0jklmnopqrst"],
+      }),
+    }),
     detail: {
       summary: "Events SSE endpoint",
       description:

@@ -9,7 +9,7 @@ describe("PlaylistDataRepository", () => {
     prisma.playlistData.upsert = upsert as any;
     const dto: ISnapshotDto = {
       meta: { version: "hash-abc", generated_at: new Date() },
-      data: { center_id: "c", campaigns: [] },
+      data: { store_id: "c", campaigns: [] },
     };
 
     const { PlaylistDataRepository } = await import(

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { fetchDto } from "../src/providers/fetchDto";
+import { fetchAuth } from "../src/providers/fetchAuth";
 
 const validDto = {
   meta: {
@@ -7,7 +7,7 @@ const validDto = {
     generated_at: "2026-01-01T00:00:00Z",
   },
   data: {
-    center_id: "0bd1a5f3-23e1-4f2b-9b1e-1f8c6d2c0a11",
+    store_id: "0bd1a5f3-23e1-4f2b-9b1e-1f8c6d2c0a11",
     campaigns: [
       {
         id: "12b4c6d9-0f9a-4e33-b7c2-6a3b2e8b9d31",
@@ -33,7 +33,7 @@ const validDto = {
   },
 };
 
-describe("fetchDto", () => {
+describe("fetchAuth", () => {
   const originalFetch = globalThis.fetch;
 
   beforeEach(() => {
@@ -52,14 +52,14 @@ describe("fetchDto", () => {
         headers: { "content-type": "application/json" },
       })) as unknown as typeof fetch;
 
-    const result = await fetchDto<typeof validDto>("https://example.com");
+    const result = await fetchAuth<typeof validDto>("https://example.com");
     expect(result?.meta.version).toBe("v1");
   });
 
   test("returns null when response is not ok", async () => {
     globalThis.fetch = (async () => new Response("", { status: 500 })) as unknown as typeof fetch;
 
-    const result = await fetchDto<typeof validDto>("https://example.com");
+    const result = await fetchAuth<typeof validDto>("https://example.com");
     expect(result).toBeNull();
   });
 
@@ -71,7 +71,7 @@ describe("fetchDto", () => {
         headers: { "content-type": "application/json" },
       })) as unknown as typeof fetch;
 
-    const result = await fetchDto<typeof validDto>("https://example.com");
+    const result = await fetchAuth<typeof validDto>("https://example.com");
     expect(result).toBeNull();
   });
 });

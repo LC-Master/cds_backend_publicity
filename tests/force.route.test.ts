@@ -20,7 +20,7 @@ describe("forceRoute", () => {
     const originalGenerate = PlaylistService.generate;
     const originalEmit = syncEventInstance.emit;
     SyncService.syncData = mock(async () => ({
-      dto: { meta: { version: "v1", generated_at: new Date() }, data: { center_id: "center-1", campaigns: [] } },
+      dto: { meta: { version: "v1", generated_at: new Date() }, data: { store_id: "center-1", campaigns: [] } },
       type: typeSyncEnum.noChange,
     }));
     PlaylistService.generate = mock(async (_dto: any) => ({ am: [], pm: [] }));
@@ -52,7 +52,7 @@ describe("forceRoute", () => {
     const originalGenerate = PlaylistService.generate;
     const originalEmit = syncEventInstance.emit;
     const syncData = mock(async () => ({
-      dto: { meta: { version: "v1", generated_at: new Date() }, data: { center_id: "center-1", campaigns: [] } },
+      dto: { meta: { version: "v1", generated_at: new Date() }, data: { store_id: "center-1", campaigns: [] } },
       type: typeSyncEnum.noChange,
     }));
     const generate = mock(async (_dto: any) => ({ am: [], pm: [] }));

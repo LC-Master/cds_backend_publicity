@@ -26,7 +26,7 @@ export default abstract class TokenService {
    * @param {jwt} jwt - Instancia del helper JWT configurada en el servidor.
    * @returns {Promise<string>} Token firmado.
    */
-  private static async generateToken(jwt: jwt) {
+  private static async generateToken(jwt: jwt): Promise<string> {
     return await jwt.sign({ server: "api" });
   }
   /**
@@ -47,6 +47,7 @@ export default abstract class TokenService {
    * @returns {Promise<string>} Hash seguro del token.
    */
   private static async hashToken(token: string): Promise<string> {
+    logger.info("Starting Argon2id hashing...");
     const hashedToken = await Bun.password.hash(token, {
       algorithm: "argon2id",
       memoryCost: 65536,
@@ -70,7 +71,7 @@ export default abstract class TokenService {
 
       const validated = await this.validateToken(token);
 
-      if(!validated) {
+      if (!validated) {
         throw new Error("Generated token is invalid");
       }
 
@@ -115,14 +116,25 @@ export default abstract class TokenService {
    * Verifica si existe una API key guardada en la DB.
    * @returns {Promise<boolean>} True si existe, false si no.
    */
-  public static async tokenApiExists() {
-    logger.info("Checking if API key exists in database...");
-    const exists = await TokenRepository.exists();
-    if (!exists) {
-      logger.warn("API key does not exist.");
-      return false;
+  public static async tokenApiExists(): Promise<boolean> {
+    try {
+      logger.info("Checking if API key exists in database...");
+      const exists = await TokenRepository.exists();
+
+      if (!exists) {
+        logger.warn("API key does not exist.");
+        return false;
+      }
+
+      logger.info("API key exists.");
+      return true;
+    } catch (error: any) {
+      logger.error({
+        message: "CRITICAL: Database query failed in tokenApiExists",
+        error: error.message,
+        stack: error.stack
+      });
+      throw error;
     }
-    logger.info("API key exists.");
-    return true;
   }
 }

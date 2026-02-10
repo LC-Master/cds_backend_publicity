@@ -3,6 +3,8 @@ import { StringValue } from "ms";
 declare module "bun" {
   interface Env {
     APP_BASE: string;
+    PASETO_PRIVATE_KEY: string;
+    PASETO_PUBLIC_KEY: string;
     VERSION: string;
     DATABASE_URL: string;
     API_KEY_CMS: string;

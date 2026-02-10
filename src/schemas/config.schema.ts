@@ -9,7 +9,20 @@ export const configSchema = z.object({
     .min(1, "APP_BASE: demasiado corto")
     .describe("Directorio base de la aplicación")
     .transform((val) => path.resolve(val)),
-
+  PASETO_PRIVATE_KEY: z
+    .string({
+      error: "PASETO_PRIVATE_KEY es obligatorio y tiene que ser una cadena de texto",
+    })
+    .min(32, "PASETO_PRIVATE_KEY debe tener al menos 32 caracteres")
+    .describe("Clave privada para firmar tokens PASETO")
+    .default(""),
+  PASETO_PUBLIC_KEY: z
+    .string({
+      error: "PASETO_PUBLIC_KEY es obligatorio y tiene que ser una cadena de texto",
+    })
+    .min(32, "PASETO_PUBLIC_KEY debe tener al menos 32 caracteres")
+    .describe("Clave pública para verificar tokens PASETO")
+    .default(""),
   MEDIA_PATH: z
     .string({
       error: "MEDIA_PATH es obligatorio y tiene que ser una cadena de texto",
