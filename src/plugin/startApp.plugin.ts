@@ -26,7 +26,7 @@ export const startApp = new Elysia().use(authPlugin).onStart(async function () {
 
   await StorageService.cleanTempFolder();
 
-  await SyncService.checkSyncInStartup();
+    await SyncService.checkSyncInStartup();
 
   await StorageService.retryFailedDownloads();
 
