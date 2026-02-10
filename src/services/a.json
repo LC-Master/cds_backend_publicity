@@ -1,0 +1,105 @@
+{
+    "meta": {
+        "api_version": "v1",
+        "version": "54d41b7421f8c59c4792f5cdcca9c1ac0e54a3a7ea6a71f9f80e2e4bf7532e30",
+        "generated_at": "2026-02-10T13:02:13.000Z"
+    },
+    "data": {
+        "store_id": 349,
+        "place_holder": {
+            "id": "019C43F8-0B15-72FA-AB03-5A8584AD68C2",
+            "name": "placeholder.webp",
+            "checksum": "21148e04b5b6e08b960460189cb7a7e4",
+            "duration_seconds": 0,
+            "position": 0
+        },
+        "campaigns": [
+            {
+                "id": "019C4409-D86D-7081-8634-12A6891ADBEE",
+                "title": "jsdfhsd",
+                "department": "Gas Distribution Plant Operator",
+                "agreements": [
+                    "Batz-Gaylord"
+                ],
+                "start_at": "2026-02-09T23:11:00.000Z",
+                "end_at": "2026-02-10T13:05:00.000Z",
+                "slots": {
+                    "am": [
+                        {
+                            "id": "019C4409-94B2-7005-A586-EA88EE28BB4E",
+                            "name": "watermarked_preview.mp4",
+                            "checksum": "08bd2216bc4fccba1ebbc56ae7a09925",
+                            "duration_seconds": 13,
+                            "position": 1
+                        },
+                        {
+                            "id": "019C4409-9489-7016-B070-843F42AA4099",
+                            "name": "video_preview_h264.mp4",
+                            "checksum": "7fdbadc86f9aa0dc7b39344063036dc8",
+                            "duration_seconds": 8,
+                            "position": 2
+                        },
+                        {
+                            "id": "019C4409-944F-704D-ACFB-A5DE52C39F38",
+                            "name": "sample-5s.mp4",
+                            "checksum": "8cd0e9af15f4baaafe9dfe98ace8b886",
+                            "duration_seconds": 6,
+                            "position": 3
+                        },
+                        {
+                            "id": "019C4409-9411-7109-A34C-1D7B9B01B7AC",
+                            "name": "sample-5.mp4",
+                            "checksum": "aeaaa60d41a507774a381e9b5153d5fa",
+                            "duration_seconds": 30,
+                            "position": 4
+                        },
+                        {
+                            "id": "019C4409-93E1-71B3-B7B3-095177D993B6",
+                            "name": "mixkit-plane-landing-gear-going-up-28010-hd-ready (1).mp4",
+                            "checksum": "1e65470a3df06ba48e3c0f50f1f8077e",
+                            "duration_seconds": 11,
+                            "position": 5
+                        }
+                    ],
+                    "pm": [
+                        {
+                            "id": "019C4409-94B2-7005-A586-EA88EE28BB4E",
+                            "name": "watermarked_preview.mp4",
+                            "checksum": "08bd2216bc4fccba1ebbc56ae7a09925",
+                            "duration_seconds": 13,
+                            "position": 1
+                        },
+                        {
+                            "id": "019C4409-9489-7016-B070-843F42AA4099",
+                            "name": "video_preview_h264.mp4",
+                            "checksum": "7fdbadc86f9aa0dc7b39344063036dc8",
+                            "duration_seconds": 8,
+                            "position": 2
+                        },
+                        {
+                            "id": "019C4409-944F-704D-ACFB-A5DE52C39F38",
+                            "name": "sample-5s.mp4",
+                            "checksum": "8cd0e9af15f4baaafe9dfe98ace8b886",
+                            "duration_seconds": 6,
+                            "position": 3
+                        },
+                        {
+                            "id": "019C4409-9411-7109-A34C-1D7B9B01B7AC",
+                            "name": "sample-5.mp4",
+                            "checksum": "aeaaa60d41a507774a381e9b5153d5fa",
+                            "duration_seconds": 30,
+                            "position": 4
+                        },
+                        {
+                            "id": "019C4409-93E1-71B3-B7B3-095177D993B6",
+                            "name": "mixkit-plane-landing-gear-going-up-28010-hd-ready (1).mp4",
+                            "checksum": "1e65470a3df06ba48e3c0f50f1f8077e",
+                            "duration_seconds": 11,
+                            "position": 5
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}
