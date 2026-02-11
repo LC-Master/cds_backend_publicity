@@ -237,9 +237,10 @@ export abstract class SyncService {
       time: start_at.toLocaleString(),
     });
     this.reportHealth(healthEnum.SYNCING, start_at, null);
-    const data = await fetchAuth(CONFIG.CMS_ROUTE_SNAPSHOT);
+    const data = await fetchAuth<ISnapshotDto>(CONFIG.CMS_ROUTE_SNAPSHOT);
     if (!data) {
       logger.warn("Failed to fetch DTO from CMS.");
+      this.reportHealth(healthEnum.FAILED, start_at, new Date(), 'Failed to fetch DTO from CMS');
       throw new Error("Failed to fetch DTO");
     }
     const dto = parseSchema<ISnapshotDto>(data, snapshotSchema);
@@ -308,15 +309,15 @@ export abstract class SyncService {
       return dto;
     } catch (err: { message: string } | any) {
       logger.error({ message: `Sync failed services`, error: err.message });
-      this.reportHealth(healthEnum.FAILED, start_at, new Date());
+      this.reportHealth(healthEnum.FAILED, start_at, new Date(), err.message);
       await this.finishSync(dto?.meta?.version ?? 'unknown', err.message);
       return null;
     } finally {
       await StorageService.cleanTempFolder();
     }
   }
-  private static reportHealth(status: healthEnum, start_at: Date | null, end_at: Date | null): void {
-    HealthService.isHealthy(status, start_at, end_at).catch(err =>
+  public static reportHealth(status: healthEnum, start_at: Date | null, end_at: Date | null, errorMessage?: string): void {
+    HealthService.isHealthy(status, start_at, end_at, errorMessage).catch(err =>
       logger.error({ message: `Health report failed for ${status}`, error: err.message })
     );
   };

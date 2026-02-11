@@ -18,7 +18,7 @@ export abstract class HealthService {
    * Recolecta métricas y las envía al endpoint de health del CMS.
    * Maneja errores internamente y registra resultados.
    */
-  public static async isHealthy(status: healthEnum, start_at: Date | null, end_at: Date | null): Promise<void> {
+  public static async isHealthy(status: healthEnum, start_at: Date | null, end_at: Date | null, errorMessage?: string): Promise<void> {
     try {
       const [media, syncState, lastPlaylist, mediaCount] = await Promise.all([
         MediaRepository.getFilesWithError(),
@@ -44,6 +44,7 @@ export abstract class HealthService {
         syncState: status,
         uptime: process.uptime(),
         mediaCount: mediaCount,
+        errorMessage,
         communicationKey: keyPaseto?.privateKey.export({ type: 'pkcs8', format: 'der' })
           .subarray(-32)
           .toString('hex')
@@ -93,4 +94,5 @@ export abstract class HealthService {
       logger.error(`Health check failed: ${err}`);
     }
   }
+  
 }

@@ -13,10 +13,10 @@ import { CONFIG } from "@src/config/config";
  * @param {RequestInit} [options] - Opciones para el fetch (headers, method, body, etc.).
  * @returns {Promise<any|null>} Respuesta JSON o null en caso de error.
  */
-export const fetchAuth = async (
+export const fetchAuth = async <T>(
   url: string,
   options: Omit<RequestInit, "body"> & { body?: any } = {}
-): Promise<any | null> => {
+): Promise<T | null> => {
   const controller = new AbortController();
   const timeout = ms(
     (CONFIG.FETCH_TIMEOUT_SECONDS

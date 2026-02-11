@@ -47,6 +47,10 @@ export const healthSchema = z.object({
                 .describe('timestamp of the last error encountered'),
         })
     ).nullable(),
+    errorMessage: z.string()
+        .nullable()
+        .default(null)
+        .describe('optional field to provide additional error information'),
     reported_at: z
         .date()
         .transform((d) => d.toISOString())
