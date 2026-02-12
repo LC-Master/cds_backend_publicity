@@ -3,6 +3,7 @@
   "version": "1.0.50",
   "type": "module",
   "scripts": {
+    "build" : "bun run build/build.ts",
     "test": "bun test --coverage",
     "dev": "bun run --watch src/index.ts",
     "while": "powershell -Command \"for (;;) { bun run --watch src/index.ts }\""
