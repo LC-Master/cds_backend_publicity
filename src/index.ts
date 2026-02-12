@@ -20,6 +20,7 @@ import { apiDoc } from "./routes/openDoc.route";
 import { authMiddleware } from "./middlewares/auth.middleware";
 import { startApp } from "./plugin/startApp.plugin";
 import { authRoute } from "./routes/auth.route";
+
 export const app = new Elysia({ prefix: "/api" })
   .use(apiDoc)
   .use(startApp)
