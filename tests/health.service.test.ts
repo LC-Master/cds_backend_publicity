@@ -13,6 +13,7 @@ describe("HealthService", () => {
   test("reports health to CMS", async () => {
     const { StorageService } = await import("../src/services/storage.service");
     const { prisma } = await import("../src/providers/prisma");
+    const { healthEnum } = await import("../src/enums/health.enum");
     const originalGetDiskInfo = StorageService.getDiskInfo;
     const originalFindMany = prisma.media.findMany;
     const originalCount = prisma.media.count;
@@ -32,7 +33,7 @@ describe("HealthService", () => {
     globalThis.fetch = mock(async () => new Response("", { status: 200 })) as unknown as typeof fetch;
 
     const { HealthService } = await import("../src/services/health.service");
-    await HealthService.isHealthy();
+    await HealthService.isHealthy(healthEnum.SYNCING, new Date(), new Date());
 
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
     globalThis.fetch = originalFetch;

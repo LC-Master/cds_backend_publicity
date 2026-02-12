@@ -7,13 +7,13 @@ const validDto = {
     generated_at: "2026-01-01T00:00:00Z",
   },
   data: {
-    store_id: "0bd1a5f3-23e1-4f2b-9b1e-1f8c6d2c0a11",
+    store_id: 101,
     campaigns: [
       {
         id: "12b4c6d9-0f9a-4e33-b7c2-6a3b2e8b9d31",
         title: "Campaign A",
         department: "Marketing",
-        agreement: "Agreement",
+        agreements: ["Agreement"],
         start_at: "2026-01-01T00:00:00Z",
         end_at: "2026-02-01T00:00:00Z",
         slots: {
@@ -72,6 +72,8 @@ describe("fetchAuth", () => {
       })) as unknown as typeof fetch;
 
     const result = await fetchAuth<typeof validDto>("https://example.com");
-    expect(result).toBeNull();
+    // fetchAuth solo valida el HTTP status; la validación de esquema ocurre aguas arriba
+    expect(result).not.toBeNull();
+    expect(result?.meta.version).toBe(1 as any);
   });
 });

@@ -4,13 +4,13 @@ import { typeSyncEnum } from "../src/enums/typeSync.enum";
 const dto = {
   meta: { version: "v1", generated_at: new Date() },
   data: {
-    store_id: "0bd1a5f3-23e1-4f2b-9b1e-1f8c6d2c0a11",
+    store_id: 101,
     campaigns: [
       {
         id: "d290f1ee-6c54-4b01-90e6-d701748f0851",
         title: "Test Campaign",
         department: "Marketing",
-        agreement: "Agreement 1",
+        agreements: ["Agreement 1"],
         start_at: new Date(),
         end_at: new Date(),
         slots: {
@@ -48,12 +48,14 @@ describe("SyncService", () => {
     const { StorageService } = await import("../src/services/storage.service");
     const { MediaRepository } =
       await import("../src/repository/media.repository");
+    const { MediaService } = await import("../src/services/media.service");
     const { PlaylistDataRepository } =
       await import("../src/repository/playlistData.repository");
 
     const originalTransaction = prisma.$transaction;
     const originalUpsert = prisma.syncState.upsert;
-    const originalFilesExist = StorageService.getMissingFiles;
+    const originalGetMissingMedia = MediaService.getMissingFiles;
+    const originalCheckPhysical = MediaService.checkPhysicalMedia;
     const originalDownload = StorageService.downloadAndVerifyFiles;
     const originalClean = StorageService.cleanTempFolder;
     const originalSaveMany = MediaRepository.saveMany;
@@ -91,7 +93,8 @@ describe("SyncService", () => {
     };
     prisma.$transaction = mock(async (cb: any) => cb(tx)) as any;
     prisma.syncState.upsert = mock(async () => ({})) as any;
-    StorageService.getMissingFiles = mock(async () => []);
+    MediaService.checkPhysicalMedia = mock(async () => []);
+    MediaService.getMissingFiles = mock(async () => [] as any);
     StorageService.downloadAndVerifyFiles = mock(async () => []);
     StorageService.cleanTempFolder = mock(async () => undefined);
     MediaRepository.saveMany = mock(async () => []);
@@ -112,7 +115,8 @@ describe("SyncService", () => {
 
     prisma.$transaction = originalTransaction;
     prisma.syncState.upsert = originalUpsert;
-    StorageService.getMissingFiles = originalFilesExist;
+    MediaService.checkPhysicalMedia = originalCheckPhysical;
+    MediaService.getMissingFiles = originalGetMissingMedia;
     StorageService.downloadAndVerifyFiles = originalDownload;
     StorageService.cleanTempFolder = originalClean;
     MediaRepository.saveMany = originalSaveMany;
@@ -139,10 +143,12 @@ describe("SyncService", () => {
       await import("../src/repository/media.repository");
     const { PlaylistDataRepository } =
       await import("../src/repository/playlistData.repository");
+    const { MediaService } = await import("../src/services/media.service");
 
     const originalTransaction = prisma.$transaction;
     const originalUpsert = prisma.syncState.upsert;
-    const originalFilesExist = StorageService.getMissingFiles;
+    const originalGetMissingMedia = MediaService.getMissingFiles;
+    const originalCheckPhysical = MediaService.checkPhysicalMedia;
     const originalDownload = StorageService.downloadAndVerifyFiles;
     const originalClean = StorageService.cleanTempFolder;
     const originalSaveMany = MediaRepository.saveMany;
@@ -168,7 +174,8 @@ describe("SyncService", () => {
     };
     prisma.$transaction = mock(async (cb: any) => cb(tx)) as any;
     prisma.syncState.upsert = mock(async () => ({})) as any;
-    StorageService.filesExist = mock(async () => []);
+    MediaService.checkPhysicalMedia = mock(async () => []);
+    MediaService.getMissingFiles = mock(async () => ([{ id: "m1" } as any]));
     StorageService.downloadAndVerifyFiles = mock(async () => []);
     StorageService.cleanTempFolder = mock(async () => undefined);
     MediaRepository.saveMany = mock(async () => []);
@@ -191,7 +198,8 @@ describe("SyncService", () => {
     prisma.$transaction = originalTransaction;
     if (originalMedia) (prisma as any).media = originalMedia;
     prisma.syncState.upsert = originalUpsert;
-    StorageService.filesExist = originalFilesExist;
+    MediaService.checkPhysicalMedia = originalCheckPhysical;
+    MediaService.getMissingFiles = originalGetMissingMedia;
     StorageService.downloadAndVerifyFiles = originalDownload;
     StorageService.cleanTempFolder = originalClean;
     MediaRepository.saveMany = originalSaveMany;

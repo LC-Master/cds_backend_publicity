@@ -22,21 +22,26 @@ describe("PlaylistService", () => {
   test("generates playlist with downloaded media only", async () => {
     const { prisma } = await import("../src/providers/prisma");
     const { StorageService } = await import("../src/services/storage.service");
+    const { MediaRepository } = await import("../src/repository/media.repository");
     const originalFindMany = prisma.media.findMany;
     const originalPathExists = StorageService.pathExists;
+    const originalGetFilesDownloaded = MediaRepository.getFilesDownloaded;
+    const originalRemoveOrphanMedia = StorageService.removeOrphanMedia;
     prisma.media.findMany = mock(async () => [{ id: "m1" }]) as unknown as typeof prisma.media.findMany;
     StorageService.pathExists = mock(async () => true) as unknown as typeof StorageService.pathExists;
+    MediaRepository.getFilesDownloaded = mock(async () => ([{ id: "m1" }])) as any;
+    StorageService.removeOrphanMedia = mock(async () => undefined) as any;
 
     const dto: ISnapshotDto = {
       meta: { version: "hash-123", generated_at: new Date() },
       data: {
-        store_id: "center",
+        store_id: 201,
         campaigns: [
           {
             id: "c1",
             title: "T1",
             department: "D1",
-            agreement: "A1",
+            agreements: ["A1"],
             start_at: new Date(Date.now() - 1000),
             end_at: new Date(Date.now() + 1000),
             slots: {
@@ -69,8 +74,11 @@ describe("PlaylistService", () => {
 
     prisma.media.findMany = originalFindMany;
     StorageService.pathExists = originalPathExists;
+    MediaRepository.getFilesDownloaded = originalGetFilesDownloaded;
+    StorageService.removeOrphanMedia = originalRemoveOrphanMedia;
 
-    expect(result.am.length).toBe(1);
-    expect(result.pm.length).toBe(0);
+    expect(result.campaigns[0].am.length).toBe(1);
+    expect(result.campaigns[0].pm.length).toBe(0);
+    expect(result.place_holder).toBeNull();
   });
 });

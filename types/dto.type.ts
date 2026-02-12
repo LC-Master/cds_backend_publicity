@@ -12,7 +12,7 @@ export interface Meta {
 }
 
 export interface Data {
-  store_id: string;
+  store_id: number;
   place_holder?: IFile;
   campaigns: Campaign[];
 }
@@ -21,7 +21,7 @@ export interface Campaign {
   id: string;
   title: string;
   department: string;
-  agreement: string;
+  agreements?: string[];
   start_at: Date;
   end_at: Date;
   slots: Slots;

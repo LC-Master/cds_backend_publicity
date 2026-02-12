@@ -11,16 +11,29 @@ mock.module("../src/providers/logger.provider", () => ({
   },
 }));
 
+mock.module("../src/plugin/auth.plugin", () => ({
+  authPlugin: new Elysia(),
+}));
+
+mock.module("paseto", () => ({
+  V4: {
+    verify: mock(async () => ({ ok: true })),
+  },
+}));
+
 describe("forceRoute", () => {
   test("returns 400 when force is false", async () => {
     const { SyncService } = await import("../src/services/sync.service");
     const { PlaylistService } = await import("../src/services/playlist.service");
     const { syncEventInstance } = await import("../src/event/syncEvent");
+    const { prisma } = await import("../src/providers/prisma");
     const originalSyncData = SyncService.syncData;
     const originalGenerate = PlaylistService.generate;
     const originalEmit = syncEventInstance.emit;
+    const originalFindUnique = prisma.syncState.findUnique;
+    prisma.syncState.findUnique = mock(async () => ({ communicationKey: "a".repeat(64) })) as any;
     SyncService.syncData = mock(async () => ({
-      dto: { meta: { version: "v1", generated_at: new Date() }, data: { store_id: "center-1", campaigns: [] } },
+      dto: { meta: { version: "v1", generated_at: new Date() }, data: { store_id: 401, campaigns: [] } },
       type: typeSyncEnum.noChange,
     }));
     PlaylistService.generate = mock(async (_dto: any) => ({ am: [], pm: [] }));
@@ -32,7 +45,7 @@ describe("forceRoute", () => {
     const res = await app.handle(
       new Request("http://localhost/sync/force", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", authorization: "Bearer token" },
         body: JSON.stringify({ force: false }),
       })
     );
@@ -42,17 +55,21 @@ describe("forceRoute", () => {
     SyncService.syncData = originalSyncData;
     PlaylistService.generate = originalGenerate;
     syncEventInstance.emit = originalEmit;
+    prisma.syncState.findUnique = originalFindUnique;
   });
 
   test("runs sync when force is true", async () => {
     const { SyncService } = await import("../src/services/sync.service");
     const { PlaylistService } = await import("../src/services/playlist.service");
     const { syncEventInstance } = await import("../src/event/syncEvent");
+    const { prisma } = await import("../src/providers/prisma");
     const originalSyncData = SyncService.syncData;
     const originalGenerate = PlaylistService.generate;
     const originalEmit = syncEventInstance.emit;
+    const originalFindUnique = prisma.syncState.findUnique;
+    prisma.syncState.findUnique = mock(async () => ({ communicationKey: "a".repeat(64) })) as any;
     const syncData = mock(async () => ({
-      dto: { meta: { version: "v1", generated_at: new Date() }, data: { store_id: "center-1", campaigns: [] } },
+      dto: { meta: { version: "v1", generated_at: new Date() }, data: { store_id: 401, campaigns: [] } },
       type: typeSyncEnum.noChange,
     }));
     const generate = mock(async (_dto: any) => ({ am: [], pm: [] }));
@@ -67,7 +84,7 @@ describe("forceRoute", () => {
     const res = await app.handle(
       new Request("http://localhost/sync/force", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", authorization: "Bearer token" },
         body: JSON.stringify({ force: true }),
       })
     );
@@ -80,5 +97,6 @@ describe("forceRoute", () => {
     SyncService.syncData = originalSyncData;
     PlaylistService.generate = originalGenerate;
     syncEventInstance.emit = originalEmit;
+    prisma.syncState.findUnique = originalFindUnique;
   });
 });
