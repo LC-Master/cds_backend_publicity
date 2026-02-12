@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Bun: API (debug)",
+            "type": "bun",
+            "runtime": "bun",
+            "watchMode": "hot",
+            "internalConsoleOptions": "openOnSessionStart",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/index.ts",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "NODE_ENV": "development"
+            }
+        },
+    ]
+}
