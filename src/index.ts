@@ -22,8 +22,8 @@ import { startApp } from "./plugin/startApp.plugin";
 import { authRoute } from "./routes/auth.route";
 export const app = new Elysia({ prefix: "/api" })
   .use(apiDoc)
-  .use(mediaRoute)
   .use(startApp)
+  .use(mediaRoute)
   .use(
     cors({
       origin: CONFIG.SERVER_NEXT_PUBLIC_PRICE_CHECKER_URL,

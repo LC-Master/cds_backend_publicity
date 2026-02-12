@@ -3,6 +3,7 @@
   "version": "1.0.50",
   "type": "module",
   "scripts": {
+    "debug": "bun run --watch --inspect=4000 src/index.ts",
     "build" : "bun run build/build.ts",
     "test": "bun test --coverage",
     "dev": "bun run --watch src/index.ts",
