@@ -36,7 +36,7 @@ yarn-error.log*
 api-key.txt
 # vercel
 .vercel
-
+http/
 **/*.trace
 **/*.zip
 **/*.tar.gz

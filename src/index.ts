@@ -21,7 +21,15 @@ import { authMiddleware } from "./middlewares/auth.middleware";
 import { startApp } from "./plugin/startApp.plugin";
 import { authRoute } from "./routes/auth.route";
 
-export const app = new Elysia({ prefix: "/api" })
+export const app = new Elysia({
+  prefix: "/api",
+  // serve: {
+  //   tls: {
+  //     cert: file('localhost+1.pem'),
+  //     key: file('localhost+1-key.pem')
+  //   }
+  // }
+})
   .use(apiDoc)
   .use(startApp)
   .use(mediaRoute)
