@@ -34,6 +34,13 @@ export const eventsRoute = new Elysia().get(
       const stream = new ReadableStream({
         start(controller) {
           sse({
+            data: {
+              message: "Conexión SSE establecida" + " ".repeat(8024)
+            },
+            event: "connected",
+            controller,
+          })
+          sse({
             data: { message: "ping" },
             event: "ping",
             controller,
