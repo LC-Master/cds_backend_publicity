@@ -36,6 +36,7 @@ export const app = new Elysia({
   .use(
     cors({
       origin: CONFIG.SERVER_NEXT_PUBLIC_PRICE_CHECKER_URL,
+      credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     })
   )

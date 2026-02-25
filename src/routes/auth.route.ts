@@ -13,7 +13,7 @@ export const authRoute = new Elysia({
   cookie: {
     secrets: [Bun.env.API_KEY_CMS],
     sign: true,
-    secure: true,
+    secure: Bun.env.NODE_ENV === "production",
   },
   detail: {
     parameters: [
@@ -33,7 +33,7 @@ export const authRoute = new Elysia({
     async ({ status, cookie: { auth } }) => {
       try {
         const token = await SseTokenService.generate();
-        auth.set({ httpOnly: true, secure: true, expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), value: token });
+        auth.set({ httpOnly: true, expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), value: token });
         return status(201, { message: 'created' });
       } catch (err) {
         logger.error({
