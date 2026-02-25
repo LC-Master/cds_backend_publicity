@@ -34,20 +34,13 @@ export const eventsRoute = new Elysia().get(
       const stream = new ReadableStream({
         start(controller) {
           sse({
-            data: {
-              message: "Conexión SSE establecida" + " ".repeat(8024)
-            },
-            event: "connected",
-            controller,
-          })
-          sse({
-            data: { message: "ping" },
+            data: { message: "ping" + " ".repeat(9000) },
             event: "ping",
             controller,
           });
           const interval = setInterval(() => {
             sse({
-              data: { message: "ping" },
+              data: { message: "ping" + " ".repeat(9000) },
               event: "ping",
               controller,
             });
@@ -55,7 +48,7 @@ export const eventsRoute = new Elysia().get(
 
           const onDtoUpdated = () => {
             sse({
-              event: "dto:updated",
+              event: "dto:updated " + " ".repeat(9000),
               controller,
               data: { message: "Nuevo DTO sincronizado" },
             });
@@ -63,7 +56,7 @@ export const eventsRoute = new Elysia().get(
 
           const onPlaylistGenerated = () => {
             sse({
-              event: "playlist:generated",
+              event: "playlist:generated" + " ".repeat(9000),
               controller,
               data: { message: "Nueva playlist generada" },
             });
