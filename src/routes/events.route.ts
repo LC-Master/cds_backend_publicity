@@ -23,13 +23,13 @@ import { Unauthorized } from "@src/schemas/Unauthorized.schema";
  */
 export const eventsRoute = new Elysia().get(
   "/events",
-  ({ status, cookie: { auth } }) => {
-
+  ({ status, cookie: { auth }, request }) => {
     if (!auth || !SseTokenService.validate(auth.value)) {
       throw status(401, { error: "Invalido o faltante SSE token" });
     }
 
-    let cleanup: () => void;
+    let cleaned = false;
+    let cleanup = () => {};
     try {
       const stream = new ReadableStream({
         start(controller) {
@@ -38,6 +38,7 @@ export const eventsRoute = new Elysia().get(
             event: "ping",
             controller,
           });
+
           const interval = setInterval(() => {
             sse({
               data: { message: "ping" },
@@ -48,7 +49,7 @@ export const eventsRoute = new Elysia().get(
 
           const onDtoUpdated = () => {
             sse({
-              event: "dto:updated ",
+              event: "dto:updated",
               controller,
               data: { message: "Nuevo DTO sincronizado" },
             });
@@ -66,10 +67,14 @@ export const eventsRoute = new Elysia().get(
           syncEventInstance.on("playlist:generated", onPlaylistGenerated);
 
           cleanup = () => {
+            if (cleaned) return;
+            cleaned = true;
+            clearInterval(interval);
             syncEventInstance.off("dto:updated", onDtoUpdated);
             syncEventInstance.off("playlist:generated", onPlaylistGenerated);
-            clearInterval(interval);
           };
+
+          request.signal.addEventListener("abort", cleanup);
         },
         cancel() {
           logger.info("Client disconnected from SSE");
