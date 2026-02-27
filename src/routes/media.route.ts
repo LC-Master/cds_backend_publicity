@@ -13,6 +13,6 @@ export const mediaRoute = new Elysia().use(
     assets: path.join(process.cwd(), "Media").toString(),
     prefix: "/media",
     maxAge: ms("1d"),
-
+    alwaysStatic: true,
   })
 );

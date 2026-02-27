@@ -6,6 +6,7 @@
  * Comentarios en español, sin tocar la lógica.
  */
 import fs from "fs/promises";
+import fsSync from "fs";
 import path from "path";
 import { prisma } from "../providers/prisma";
 import { IFile, IMediaFile } from "../../types/file.type";
@@ -14,6 +15,9 @@ import { MediaRepository } from "../repository/media.repository";
 import fileStreamProvider from "../providers/fileStream.provider";
 import { logger } from "../providers/logger.provider";
 import { CONFIG } from "@src/config/config";
+import { createHash } from "crypto";
+import { pipeline } from "stream/promises";
+import { Readable } from "stream";
 
 /**
  * Funciones utilitarias para gestión de archivos y disco.
@@ -122,8 +126,15 @@ export abstract class StorageService {
       await fs.rename(src, dest);
     } catch (err: any) {
       if (err.code === "EXDEV") {
-        await Bun.write(dest, await Bun.file(src).arrayBuffer());
-        await Bun.file(src).delete();
+        await new Promise<void>((resolve, reject) => {
+          const reader = fsSync.createReadStream(src);
+          const writer = fsSync.createWriteStream(dest);
+          reader.on("error", reject);
+          writer.on("error", reject);
+          writer.on("close", () => resolve());
+          reader.pipe(writer);
+        });
+        await fs.unlink(src);
       } else {
         throw err;
       }
@@ -139,13 +150,18 @@ export abstract class StorageService {
     file: IFile,
     stagePath: string
   ): Promise<boolean> {
-    const bunFile = Bun.file(stagePath);
-    const arrayBuffer = await bunFile.arrayBuffer();
-    const computedChecksum = Bun.MD5.hash(arrayBuffer, "hex");
+    const hash = createHash("md5");
+    await new Promise<void>((resolve, reject) => {
+      const reader = fsSync.createReadStream(stagePath);
+      reader.on("error", reject);
+      reader.on("end", () => resolve());
+      reader.pipe(hash, { end: true });
+    });
+    const computedChecksum = hash.digest("hex");
     const isValid = computedChecksum === file.checksum;
     if (!isValid) {
       logger.warn("Checksum mismatch for file:" + file.id);
-      await bunFile.delete();
+      await Bun.file(stagePath).delete();
     }
     return isValid;
   }
@@ -178,7 +194,16 @@ export abstract class StorageService {
 
     try {
       const res = await fileStreamProvider(file.id);
-      await Bun.write(stagePath, res);
+      if (!res.body) throw new Error("Response sin body");
+      // Stream con buffers pequeños para minimizar uso pico de RAM.
+      const webStream = res.body as any as import("node:stream/web").ReadableStream<any>;
+      const nodeStream = Readable.fromWeb(webStream, {
+        highWaterMark: 64 * 1024,
+      });
+      await pipeline(
+        nodeStream,
+        fsSync.createWriteStream(stagePath, { highWaterMark: 64 * 1024 })
+      );
       const isValid = await this.verifyChecksum(file, stagePath);
 
       if (!isValid) return mediaError;
