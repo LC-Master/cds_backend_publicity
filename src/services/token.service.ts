@@ -21,6 +21,11 @@ export default abstract class TokenService {
     process.cwd(),
     "token_api.txt"
   );
+  private static cachedHash: string | null = null;
+  private static lastHashLoad = 0;
+  private static readonly HASH_TTL_MS = 60_000;
+  private static readonly TOKEN_CACHE_TTL_MS = 5 * 60_000;
+  private static tokenCache = new Map<string, number>();
   /**
    * Genera un token JWT utilizando el helper `jwt`.
    * @param {jwt} jwt - Instancia del helper JWT configurada en el servidor.
@@ -40,6 +45,46 @@ export default abstract class TokenService {
     if (!validation.success) return null;
 
     return validation.data;
+  }
+
+  private static async getHashedToken(): Promise<string | null> {
+    const now = Date.now();
+    if (this.cachedHash && now - this.lastHashLoad < this.HASH_TTL_MS) {
+      return this.cachedHash;
+    }
+    const token = await TokenRepository.get();
+    this.cachedHash = token;
+    this.lastHashLoad = now;
+    return token;
+  }
+
+  /**
+   * Valida estructura, firma JWT y hash del bearer con cache en memoria para evitar recomputar Argon2 por petición.
+   */
+  public static async verifyBearer(rawToken: string, jwtInstance: jwt): Promise<boolean> {
+    const validatedRaw = await this.validateToken(rawToken);
+    if (!validatedRaw) return false;
+
+    try {
+      const verified = await jwtInstance.verify(rawToken);
+      if (!verified) return false;
+    } catch {
+      return false;
+    }
+
+    const cachedValidUntil = this.tokenCache.get(rawToken);
+    if (cachedValidUntil && cachedValidUntil > Date.now()) {
+      return true;
+    }
+
+    const hashed = await this.getHashedToken();
+    if (!hashed) return false;
+
+    const ok = await Bun.password.verify(validatedRaw, hashed);
+    if (ok) {
+      this.tokenCache.set(rawToken, Date.now() + this.TOKEN_CACHE_TTL_MS);
+    }
+    return ok;
   }
   /**
    * @description Hashea un token usando Argon2id con parámetros de seguridad.
