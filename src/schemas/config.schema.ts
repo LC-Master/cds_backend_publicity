@@ -166,7 +166,7 @@ export const configSchema = z.object({
     .min(1, "DOWNLOAD_CONCURRENCY debe ser al menos 1")
     .max(100, "DOWNLOAD_CONCURRENCY no debe superar 100")
     .describe("Número de descargas concurrentes permitidas")
-    .default(10),
+    .default(3),
 
   FETCH_TIMEOUT_SECONDS: z.coerce
     .number()

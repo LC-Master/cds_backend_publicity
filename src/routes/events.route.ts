@@ -34,6 +34,7 @@ export const eventsRoute = new Elysia().get(
     let cleaned = false;
     let cleanup = () => {};
     let abortHandler: (() => void) | null = null;
+    let pingTimeout: Timer | null = null;
     try {
       const stream = new ReadableStream({
         start(controller) {
@@ -43,13 +44,17 @@ export const eventsRoute = new Elysia().get(
             controller,
           });
 
-          const interval = setInterval(() => {
-            sse({
-              data: { message: "ping" },
-              event: "ping",
-              controller,
-            });
-          }, ms("22s"));
+          const schedulePing = () => {
+            pingTimeout = setTimeout(() => {
+              sse({
+                data: { message: "ping" },
+                event: "ping",
+                controller,
+              });
+              schedulePing();
+            }, ms("22s"));
+          };
+          schedulePing();
 
           const onDtoUpdated = () => {
             sse({
@@ -73,7 +78,7 @@ export const eventsRoute = new Elysia().get(
           cleanup = () => {
             if (cleaned) return;
             cleaned = true;
-            clearInterval(interval);
+            if (pingTimeout) clearTimeout(pingTimeout);
             syncEventInstance.off("dto:updated", onDtoUpdated);
             syncEventInstance.off("playlist:generated", onPlaylistGenerated);
             if (abortHandler) {
@@ -82,7 +87,7 @@ export const eventsRoute = new Elysia().get(
           };
 
           abortHandler = () => cleanup();
-          request.signal.addEventListener("abort", abortHandler);
+          request.signal.addEventListener("abort", abortHandler, { once: true });
         },
         cancel() {
           logger.info("Client disconnected from SSE");

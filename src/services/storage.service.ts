@@ -228,7 +228,8 @@ export abstract class StorageService {
   public static async downloadAndVerifyFiles(
     files: IFile[]
   ): Promise<IMediaFile[]> {
-    const chunks = this.getChunks(files, CONFIG.DOWNLOAD_CONCURRENCY);
+    const maxConcurrent = Math.max(1, Math.min(CONFIG.DOWNLOAD_CONCURRENCY, 4));
+    const chunks = this.getChunks(files, maxConcurrent);
     let results: IMediaFile[] = [];
     for (const chunk of chunks) {
       const chunkResults = await Promise.all(

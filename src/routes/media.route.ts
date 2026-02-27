@@ -12,7 +12,10 @@ export const mediaRoute = new Elysia().use(
   staticPlugin({
     assets: path.join(process.cwd(), "Media").toString(),
     prefix: "/media",
-    maxAge: ms("1d"),
+    maxAge: ms("30d"),
     alwaysStatic: true,
+    headers: {
+      "Cache-Control": "public, max-age=2592000, immutable",
+    },
   })
 );
