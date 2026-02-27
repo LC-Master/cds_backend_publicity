@@ -6,6 +6,9 @@ import { logger } from "../providers/logger.provider";
 import { SseTokenService } from "@src/services/sse-token.service";
 import { Unauthorized } from "@src/schemas/Unauthorized.schema";
 
+// Permitir más de 10 conexiones SSE simultáneas sin warnings.
+syncEventInstance.setMaxListeners(0);
+
 /**
  * @author Francisco A. Rojas F.
  * @module Events Route
@@ -30,6 +33,7 @@ export const eventsRoute = new Elysia().get(
 
     let cleaned = false;
     let cleanup = () => {};
+    let abortHandler: (() => void) | null = null;
     try {
       const stream = new ReadableStream({
         start(controller) {
@@ -72,9 +76,13 @@ export const eventsRoute = new Elysia().get(
             clearInterval(interval);
             syncEventInstance.off("dto:updated", onDtoUpdated);
             syncEventInstance.off("playlist:generated", onPlaylistGenerated);
+            if (abortHandler) {
+              request.signal.removeEventListener("abort", abortHandler);
+            }
           };
 
-          request.signal.addEventListener("abort", cleanup);
+          abortHandler = () => cleanup();
+          request.signal.addEventListener("abort", abortHandler);
         },
         cancel() {
           logger.info("Client disconnected from SSE");
