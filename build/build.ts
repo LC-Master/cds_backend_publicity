@@ -3,7 +3,6 @@ import { logger } from "../src/providers/logger.provider";
 try {
     await Bun.build({
         entrypoints: ["src/index.ts"],
-        minify: true,
         compile: {
             outfile: 'dist/cds.exe',
             windows: {
