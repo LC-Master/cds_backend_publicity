@@ -5,10 +5,9 @@ try {
         entrypoints: ["src/index.ts"],
         target: "bun",
         minify: {
-            keepNames: false,
             whitespace: true,
-            identifiers: true,
             syntax: true,
+            identifiers: false,
         },
         sourcemap: "none",
         compile: {
