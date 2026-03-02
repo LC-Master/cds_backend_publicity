@@ -8,6 +8,42 @@ import TokenService from "@src/services/token.service";
 import Elysia from "elysia";
 import { authPlugin } from "./auth.plugin";
 import { SseTokenService } from "@src/services/sse-token.service";
+import { dlopen } from "bun:ffi";
+
+const kernel32 = process.platform === "win32"
+  ? dlopen("kernel32.dll", {
+      GetCurrentProcess: {
+        args: [],
+        returns: "ptr",
+      },
+      SetProcessWorkingSetSize: {
+        args: ["ptr", "usize", "usize"],
+        returns: "bool",
+      },
+    })
+  : null;
+
+export function forceWindowsShrink() {
+  if (!kernel32) return;
+  try {
+    const handle = kernel32.symbols.GetCurrentProcess();
+    const SHRINK_VALUE = BigInt("18446744073709551615");
+    const success = kernel32.symbols.SetProcessWorkingSetSize(
+      handle,
+      SHRINK_VALUE,
+      SHRINK_VALUE
+    );
+
+    if (success) {
+      logger.info("💎 Windows RAM 'Shrink' successful. RSS reduced.");
+    }
+  } catch (err: any) {
+    logger.warn({
+      message: "Could not perform Windows memory shrink",
+      error: err.message,
+    });
+  }
+}
 /**
  * @module Start App Plugin
  * @description
@@ -51,5 +87,17 @@ export const startApp = new Elysia().use(authPlugin).onStart(async function () {
         logger.warn({ message: "Manual GC failed", error: (gcErr as Error).message });
       }
     }
+
+      if (process.platform === "win32") {
+        try {
+          Bun.gc(true);
+          forceWindowsShrink();
+        } catch (err) {
+          logger.warn({
+            message: "Windows shrink failed",
+            error: (err as Error)?.message ?? String(err),
+          });
+        }
+      }
   }
 });
