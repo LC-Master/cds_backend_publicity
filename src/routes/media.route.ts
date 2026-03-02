@@ -4,7 +4,7 @@
  * Sirve archivos desde `Media` sin cacheos en memoria del servidor.
  * Streaming directo de Bun.file().stream() para evitar retener buffers.
  */
-import Elysia from "elysia";
+import Elysia, { file } from "elysia";
 import path from "path";
 import { CONFIG } from "@src/config/config";
 
@@ -25,17 +25,17 @@ export const mediaRoute = new Elysia().get(
       return new Response("Invalid path", { status: 400 });
     }
 
-    const file = Bun.file(filePath);
+    const bunFile = Bun.file(filePath);
 
-    if (!(await file.exists())) {
+    if (!(await bunFile.exists())) {
       set.status = 404;
       return new Response("Not found", { status: 404 });
     }
 
-    // Respuesta directa con Bun.file (streaming implícito); evita buffers intermedios.
+    // Usa helper file() de Elysia para streaming sin caching y sin buffers extra.
     set.headers = {
       "Cache-Control": "no-store",
     };
-    return new Response(file);
+    return file(filePath);
   }
 );
