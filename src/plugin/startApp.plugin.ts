@@ -43,5 +43,6 @@ export const startApp = new Elysia().use(authPlugin).onStart(async function () {
       message: "Startup sync finished",
       time: new Date().toLocaleString(),
     });
+    Bun.gc(true);
   }
 });
