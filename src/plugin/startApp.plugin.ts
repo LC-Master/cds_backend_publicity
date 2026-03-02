@@ -35,7 +35,7 @@ export function forceWindowsShrink() {
     );
 
     if (success) {
-      logger.info("💎 Windows RAM 'Shrink' successful. RSS reduced.");
+      logger.info("Windows RAM 'Shrink' successful. RSS reduced.");
     }
   } catch (err: any) {
     logger.warn({
