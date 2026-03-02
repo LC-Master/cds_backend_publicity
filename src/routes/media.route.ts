@@ -31,11 +31,6 @@ export const mediaRoute = new Elysia().get(
       set.status = 404;
       return new Response("Not found", { status: 404 });
     }
-
-    // Usa helper file() de Elysia para streaming sin caching y sin buffers extra.
-    set.headers = {
-      "Cache-Control": "public, max-age=3600",
-    };
     return file(filePath);
   }
 );
