@@ -32,28 +32,10 @@ export const mediaRoute = new Elysia().get(
       return new Response("Not found", { status: 404 });
     }
 
-    const range = request.headers.get("range");
-    if (range) {
-      const size = file.size;
-      const match = /bytes=(\d+)-(\d*)/.exec(range);
-      if (match) {
-        const start = Number(match[1]);
-        const end = match[2] ? Number(match[2]) : size - 1;
-        const chunk = file.slice(start, end + 1);
-        set.status = 206;
-        set.headers = {
-          "Content-Range": `bytes ${start}-${end}/${size}`,
-          "Accept-Ranges": "bytes",
-          "Content-Length": `${chunk.size}`,
-        };
-        return new Response(chunk.stream());
-      }
-    }
-
+    // Respuesta directa con Bun.file (streaming implícito); evita buffers intermedios.
     set.headers = {
-      "Accept-Ranges": "bytes",
       "Cache-Control": "no-store",
     };
-    return new Response(file.stream());
+    return new Response(file);
   }
 );
