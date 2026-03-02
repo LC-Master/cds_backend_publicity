@@ -26,7 +26,7 @@ export const startApp = new Elysia().use(authPlugin).onStart(async function () {
 
   await StorageService.cleanTempFolder();
 
-    await SyncService.checkSyncInStartup();
+  await SyncService.checkSyncInStartup();
 
   await StorageService.retryFailedDownloads();
 
@@ -43,6 +43,5 @@ export const startApp = new Elysia().use(authPlugin).onStart(async function () {
       message: "Startup sync finished",
       time: new Date().toLocaleString(),
     });
-    Bun.gc(true);
   }
 });
