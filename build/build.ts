@@ -9,7 +9,6 @@ try {
             syntax: true,
             identifiers: false,
         },
-        bytecode: true,
         sourcemap: "none",
         compile: {
             target: "bun-windows-x64",
