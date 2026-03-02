@@ -43,5 +43,13 @@ export const startApp = new Elysia().use(authPlugin).onStart(async function () {
       message: "Startup sync finished",
       time: new Date().toLocaleString(),
     });
+    if (Bun.env.ENABLE_MANUAL_GC === "true" && typeof global.gc === "function") {
+      try {
+        global.gc();
+        logger.info("Manual GC triggered after startup.");
+      } catch (gcErr) {
+        logger.warn({ message: "Manual GC failed", error: (gcErr as Error).message });
+      }
+    }
   }
 });

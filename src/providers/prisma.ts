@@ -11,9 +11,9 @@ const sqlConfig = {
   server: DB_HOST,
   port: DB_PORT,
   pool: {
-    max: 10,
+    max: 3,
     min: 0,
-    idleTimeoutMillis: 30000,
+    idleTimeoutMillis: 10000,
   },
   options: {
     encrypt: true,
