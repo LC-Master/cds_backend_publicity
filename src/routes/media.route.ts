@@ -12,8 +12,19 @@ export const mediaRoute = new Elysia().get(
   "/media/*",
   async ({ request, set }) => {
     const url = new URL(request.url);
-    const relative = url.pathname.replace(/^\/media\//, "");
-    const filePath = path.join(CONFIG.MEDIA_PATH, relative);
+    const relative = decodeURIComponent(
+      url.pathname.replace(/^\/api\/media\//, "")
+    );
+    const normalized = path.normalize(relative);
+    const filePath = path.join(CONFIG.MEDIA_PATH, normalized);
+
+    const baseResolved = path.resolve(CONFIG.MEDIA_PATH);
+    const targetResolved = path.resolve(filePath);
+    if (!targetResolved.startsWith(baseResolved)) {
+      set.status = 400;
+      return new Response("Invalid path", { status: 400 });
+    }
+
     const file = Bun.file(filePath);
 
     if (!(await file.exists())) {
