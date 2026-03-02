@@ -34,7 +34,7 @@ export const mediaRoute = new Elysia().get(
 
     // Usa helper file() de Elysia para streaming sin caching y sin buffers extra.
     set.headers = {
-      "Cache-Control": "no-store",
+      "Cache-Control": "public, max-age=3600",
     };
     return file(filePath);
   }
