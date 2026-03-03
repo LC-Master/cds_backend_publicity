@@ -281,8 +281,8 @@ export abstract class SyncService {
 
       if (syncedFiles.length > 0) {
         logger.info({
-          message: "After DB check, files need download",
-          filesToDownload: syncedFiles.length,
+          message: "After checking DB files need to be downloaded",
+          syncedFiles,
         });
 
         const files = await StorageService.downloadAndVerifyFiles(syncedFiles);

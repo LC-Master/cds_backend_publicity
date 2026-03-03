@@ -77,7 +77,6 @@ export const syncCrons = new Elysia()
             logger.info({
               message: "Playlist generation skipped: Sync in progress",
             });
-            return;
           }
           const dto = await prisma.playlistData.findUnique({
             where: { id: 1 },

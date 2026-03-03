@@ -13,9 +13,7 @@ export const mediaRoute = new Elysia().get(
   async ({ request, set }) => {
     const url = new URL(request.url);
     const relative = decodeURIComponent(
-      url.pathname
-        .replace(/^\/(?:api\/)?media\//, "")
-        .replace(/^[/\\]+/, "")
+      url.pathname.replace(/^\/api\/media\//, "")
     );
     const normalized = path.normalize(relative);
     const filePath = path.join(CONFIG.MEDIA_PATH, normalized);
@@ -33,6 +31,11 @@ export const mediaRoute = new Elysia().get(
       set.status = 404;
       return new Response("Not found", { status: 404 });
     }
+
+    // Usa helper file() de Elysia para streaming sin caching y sin buffers extra.
+    set.headers = {
+      "Cache-Control": "no-store",
+    };
     return file(filePath);
   }
 );

@@ -66,29 +66,38 @@ export abstract class MediaRepository {
  * @returns Lista de archivos de media que tienen errores de descarga y no han superado el límite de reintentos.
  */
   public static async getFilesWithError(): Promise<IFile[]> {
-    const files = await prisma.media.findMany({
+    return await prisma.$extends({
+      result: {
+        media: {
+          errorType: {
+            needs: { status: true },
+            compute(media) {
+              return media.status === mediaStatusEnum.ERROR ? "Download Error" : "Unknown";
+            }
+          },
+          lastErrorAt: {
+            needs: { updatedAt: true, status: true },
+            compute(media) {
+              return media.status === mediaStatusEnum.ERROR ? new Date(media.updatedAt) : null;
+            }
+          },
+          name: {
+            needs: {
+              filename: true
+            },
+            compute(media) {
+              return media.filename;
+            }
+          }
+        }
+      }
+    }).media.findMany({
       where: {
         isDownloaded: false,
         errorCount: { gte: 5 },
       },
-      select: {
-        id: true,
-        checksum: true,
-        filename: true,
-        errorCount: true,
-        status: true,
-        updatedAt: true,
-      },
+      select: { id: true, checksum: true, name: true, errorCount: true, errorType: true, lastErrorAt: true },
     });
-
-    return files.map((file) => ({
-      id: file.id,
-      checksum: file.checksum,
-      name: file.filename,
-      errorCount: file.errorCount,
-      errorType: file.status === mediaStatusEnum.ERROR ? "Download Error" : "Unknown",
-      lastErrorAt: file.status === mediaStatusEnum.ERROR ? new Date(file.updatedAt) : null,
-    })) as IFile[];
   }
   /**
    * @returns  Lista de archivos de media que están marcados como descargados en la base de datos.
