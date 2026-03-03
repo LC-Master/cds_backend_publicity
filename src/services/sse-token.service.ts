@@ -1,7 +1,6 @@
 import { V4 } from "paseto";
 import path from "path"
 import { logger } from "@src/providers/logger.provider";
-import { spawn } from "child_process";
 /**
  * @module SSE Token Service
  * @description
@@ -43,13 +42,7 @@ export abstract class SseTokenService {
 
       logger.info("✅ Llaves generadas y guardadas en el entorno.");
       logger.info("🛑 Reiniciando servidor para inyectar variables...");
-      const child = spawn(process.argv[0], process.argv.slice(1), {
-        detached: true,
-        stdio: "inherit",
-        shell: true
-      });
-
-      child.unref();
+      
       process.exit(0);
     }
     logger.info("Identidad cargada. Sistema listo.");
