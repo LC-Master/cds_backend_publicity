@@ -26,7 +26,7 @@ export abstract class SseTokenService {
         await Bun.write(envPath, `PASETO_PRIVATE_KEY=${secretKey}\nPASETO_PUBLIC_KEY=${publicKey}\n`);
         logger.info("✅ Llaves generadas y guardadas en el entorno.");
         logger.info("🛑 Reiniciando servidor para inyectar variables...");
-        process.exit(0);
+        process.exit(1);
       }
 
       const existingEnv = await env.text();
@@ -43,7 +43,7 @@ export abstract class SseTokenService {
       logger.info("✅ Llaves generadas y guardadas en el entorno.");
       logger.info("🛑 Reiniciando servidor para inyectar variables...");
       
-      process.exit(0);
+      process.exit(1);
     }
     logger.info("Identidad cargada. Sistema listo.");
   }
