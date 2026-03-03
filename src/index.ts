@@ -22,13 +22,7 @@ import { startApp } from "./plugin/startApp.plugin";
 import { authRoute } from "./routes/auth.route";
 
 export const app = new Elysia({
-  prefix: "/api",
-  // serve: {
-  //   tls: {
-  //     cert: file('localhost+1.pem'),
-  //     key: file('localhost+1-key.pem')
-  //   }
-  // }
+  prefix: "/api"
 })
   .use(apiDoc)
   .use(startApp)
