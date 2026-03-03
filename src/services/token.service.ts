@@ -25,6 +25,7 @@ export default abstract class TokenService {
   private static lastHashLoad = 0;
   private static readonly HASH_TTL_MS = 60_000;
   private static readonly TOKEN_CACHE_TTL_MS = 5 * 60_000;
+  private static readonly TOKEN_CACHE_MAX_ENTRIES = 2000;
   private static tokenCache = new Map<string, number>();
   /**
    * Genera un token JWT utilizando el helper `jwt`.
@@ -62,6 +63,8 @@ export default abstract class TokenService {
    * Valida estructura, firma JWT y hash del bearer con cache en memoria para evitar recomputar Argon2 por petición.
    */
   public static async verifyBearer(rawToken: string, jwtInstance: jwt): Promise<boolean> {
+    this.pruneTokenCache();
+
     const validatedRaw = await this.validateToken(rawToken);
     if (!validatedRaw) return false;
 
@@ -82,9 +85,32 @@ export default abstract class TokenService {
 
     const ok = await Bun.password.verify(validatedRaw, hashed);
     if (ok) {
+      if (this.tokenCache.size >= this.TOKEN_CACHE_MAX_ENTRIES) {
+        this.evictOldestTokenCacheEntries(Math.floor(this.TOKEN_CACHE_MAX_ENTRIES * 0.1));
+      }
       this.tokenCache.set(rawToken, Date.now() + this.TOKEN_CACHE_TTL_MS);
     }
     return ok;
+  }
+
+  private static pruneTokenCache(): void {
+    if (this.tokenCache.size === 0) return;
+    const now = Date.now();
+    for (const [token, expiresAt] of this.tokenCache) {
+      if (expiresAt <= now) {
+        this.tokenCache.delete(token);
+      }
+    }
+  }
+
+  private static evictOldestTokenCacheEntries(count: number): void {
+    if (count <= 0 || this.tokenCache.size === 0) return;
+    let removed = 0;
+    for (const [token] of this.tokenCache) {
+      this.tokenCache.delete(token);
+      removed++;
+      if (removed >= count) break;
+    }
   }
   /**
    * @description Hashea un token usando Argon2id con parámetros de seguridad.

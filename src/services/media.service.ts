@@ -25,7 +25,10 @@ export abstract class MediaService {
       : [];
 
     const missingFiles = mediaListIds.filter((id) => !files.includes(id));
-    logger.info({ missingFiles });
+    logger.info({
+      message: "Physical media validation finished",
+      missingCount: missingFiles.length,
+    });
     return missingFiles;
   }
   /**
