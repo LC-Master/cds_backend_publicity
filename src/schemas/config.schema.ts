@@ -79,19 +79,7 @@ export const configSchema = z.object({
 
   CMS_BASE_URL: z
     .url({ error: "CMS_BASE_URL debe ser una URL válida" })
-    .describe("URL base del CMS"),
-
-  CMS_MEDIA_BASE_URL: z
-    .url({
-      error: "CMS_MEDIA_BASE_URL debe ser una URL válida",
-    })
-    .describe("URL base para descargar medios del CMS"),
-
-  CMS_ROUTE_SNAPSHOT: z
-    .url({
-      error: "CMS_ROUTE_SNAPSHOT debe ser una URL válida",
-    })
-    .describe("URL para la instantánea de rutas del CMS"),
+    .describe("URL base del CMS (ej: http://localhost)"),
 
   PORT: z.coerce
     .number()

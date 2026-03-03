@@ -21,6 +21,7 @@ import { MediaService } from "./media.service";
 import { parseSchema } from "@src/lib/parseSchema";
 import { HealthService } from "./health.service";
 import { healthEnum } from "@src/enums/health.enum";
+import { cmsApiUrl } from "@src/lib/cms-url";
 
 /**
  * @class SyncService
@@ -237,7 +238,7 @@ export abstract class SyncService {
       time: start_at.toLocaleString(),
     });
     this.reportHealth(healthEnum.SYNCING, start_at, null);
-    const data = await fetchAuth<ISnapshotDto>(CONFIG.CMS_ROUTE_SNAPSHOT);
+    const data = await fetchAuth<ISnapshotDto>(cmsApiUrl("store/snapshot"));
     if (!data) {
       logger.warn("Failed to fetch DTO from CMS.");
       this.reportHealth(healthEnum.FAILED, start_at, new Date(), 'Failed to fetch DTO from CMS');

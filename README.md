@@ -26,9 +26,7 @@ Estas variables se usan en runtime (ver src/config/config.ts):
 
 - SECRET_KEY
 - API_KEY_CMS
-- CMD_BASE_URL
-- CMS_MEDIA_BASE_URL
-- CMS_ROUTE_SNAPSHOT
+- CMS_BASE_URL
 - PORT
 - SERVER_NEXT_PUBLIC_PRICE_CHECKER_URL
 - DATABASE_URL

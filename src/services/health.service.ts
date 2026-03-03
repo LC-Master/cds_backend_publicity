@@ -3,7 +3,6 @@
  * @description
  * Servicio encargado de reportar el estado de salud al CMS y recolectar métricas internas.
  */
-import { CONFIG } from "@src/config/config";
 import { logger } from "../providers/logger.provider";
 import { prisma } from "../providers/prisma";
 import { StorageService } from "./storage.service";
@@ -12,6 +11,7 @@ import { fetchAuth } from "@src/providers/fetchAuth";
 import { healthEnum } from "@src/enums/health.enum";
 import { healthSchema, IHealth } from "@src/schemas/health.schema";
 import crypto from 'node:crypto';
+import { cmsApiUrl } from "@src/lib/cms-url";
 
 export abstract class HealthService {
   /**
@@ -60,7 +60,7 @@ export abstract class HealthService {
         return;
       }
 
-      const path = CONFIG.CMS_BASE_URL + "/center/health";
+      const path = cmsApiUrl("store/health");
 
       const response = await fetchAuth(path, {
         body: validation.data,

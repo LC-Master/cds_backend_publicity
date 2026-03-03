@@ -6,6 +6,7 @@
 import ms from "ms";
 import { logger } from "./logger.provider";
 import { CONFIG } from "@src/config/config";
+import { cmsMediaUrl } from "@src/lib/cms-url";
 
 /**
  * Descarga el recurso del CMS y devuelve la respuesta para su procesamiento.
@@ -16,7 +17,7 @@ export default async function fileStreamProvider(id: string): Promise<Response> 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), ms("30s"));
   try {
-    const res = await fetch(`${CONFIG.CMS_MEDIA_BASE_URL}/${id}`, {
+    const res = await fetch(cmsMediaUrl(id), {
       method: "GET",
       headers: {
         Accept: "application/json, application/octet-stream",

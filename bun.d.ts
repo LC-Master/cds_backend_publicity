@@ -11,8 +11,6 @@ declare module "bun" {
     SECRET_KEY: string;
     PORT: number;
     CMS_BASE_URL: string;
-    CMS_MEDIA_BASE_URL: string;
-    CMS_ROUTE_SNAPSHOT: string;
     DB_USER: string;
     DB_PASSWORD: string;
     DB_NAME: string;

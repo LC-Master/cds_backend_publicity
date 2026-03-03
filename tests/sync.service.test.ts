@@ -33,7 +33,7 @@ const dto = {
 describe("SyncService", () => {
   test("returns noChange when versions match", async () => {
     Bun.env.API_KEY_CMS = "token";
-    Bun.env.CMS_ROUTE_SNAPSHOT = "https://example.com";
+    Bun.env.CMS_BASE_URL = "https://example.com";
     Bun.env.FETCH_TIMEOUT_SECONDS = "1";
     const originalFetch = globalThis.fetch;
     globalThis.fetch = mock(
@@ -126,7 +126,7 @@ describe("SyncService", () => {
 
   test("starts new sync when no state exists", async () => {
     Bun.env.API_KEY_CMS = "token";
-    Bun.env.CMS_ROUTE_SNAPSHOT = "https://example.com";
+    Bun.env.CMS_BASE_URL = "https://example.com";
     Bun.env.FETCH_TIMEOUT_SECONDS = "1";
     const originalFetch = globalThis.fetch;
     globalThis.fetch = mock(
