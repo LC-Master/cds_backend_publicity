@@ -17,7 +17,11 @@ export const authMiddleware = new Elysia()
   }))
   .onBeforeHandle({ as: "global" }, async ({ jwt, bearer, request, ip }) => {
     const pathname = new URL(request.url).pathname;
-    if (pathname.startsWith("/api/media")) {
+    if (
+      pathname.startsWith("/api/media") ||
+      pathname.startsWith("/api/playlist") ||
+      pathname.startsWith("/api/events")
+    ) {
       return;
     }
 
