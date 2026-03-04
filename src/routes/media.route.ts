@@ -1,7 +1,7 @@
 /**
  * @module Media Route
  * @description
- * Sirve archivos desde `Media` sin cacheos en memoria del servidor.
+ * Sirve archivos desde `Media` sin cacheo en memoria del servidor.
  * Streaming directo de Bun.file().stream() para evitar retener buffers.
  */
 import Elysia, { file } from "elysia";

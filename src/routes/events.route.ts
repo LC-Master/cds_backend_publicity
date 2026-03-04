@@ -26,8 +26,8 @@ syncEventInstance.setMaxListeners(0);
  */
 export const eventsRoute = new Elysia().get(
   "/events",
-  ({ status, cookie: { auth }, request }) => {
-    if (!auth || !SseTokenService.validate(auth.value)) {
+  async ({ status, cookie: { auth }, request }) => {
+    if (!auth || !(await SseTokenService.validate(auth.value))) {
       throw status(401, { error: "Invalido o faltante SSE token" });
     }
 
@@ -38,36 +38,49 @@ export const eventsRoute = new Elysia().get(
     try {
       const stream = new ReadableStream({
         start(controller) {
-          sse({
-            data: { message: "ping" },
-            event: "ping",
-            controller,
-          });
+          const safeSend = ({ event, data }: { event?: string; data: object }) => {
+            if (cleaned) return false;
+            try {
+              sse({
+                data,
+                event,
+                controller,
+              });
+              return true;
+            } catch (err) {
+              logger.warn({
+                message: "SSE send failed, cleaning connection",
+                error: (err as Error).message,
+              });
+              cleanup();
+              return false;
+            }
+          };
+
+          if (!safeSend({ event: "ping", data: { message: "ping" } })) {
+            return;
+          }
 
           const schedulePing = () => {
             pingTimeout = setTimeout(() => {
-              sse({
-                data: { message: "ping" },
-                event: "ping",
-                controller,
-              });
+              if (!safeSend({ event: "ping", data: { message: "ping" } })) {
+                return;
+              }
               schedulePing();
             }, ms("22s"));
           };
           schedulePing();
 
           const onDtoUpdated = () => {
-            sse({
+            safeSend({
               event: "dto:updated",
-              controller,
               data: { message: "Nuevo DTO sincronizado" },
             });
           };
 
           const onPlaylistGenerated = () => {
-            sse({
+            safeSend({
               event: "playlist:generated",
-              controller,
               data: { message: "Nueva playlist generada" },
             });
           };
