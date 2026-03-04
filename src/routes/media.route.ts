@@ -43,8 +43,6 @@ export const mediaRoute = new Elysia().get(
     } catch (error) {
       set.status = 500;
       return new Response("Internal server error", { status: 500 });
-    } finally {
-      Bun.gc(true);
-    }
+    } 
   }
 );
