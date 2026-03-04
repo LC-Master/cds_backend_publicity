@@ -34,14 +34,12 @@ export const mediaRoute = new Elysia().get(
       }
 
       set.headers = {
-        "Content-Type": "application/octet-stream", 
-        "Content-Disposition": `attachment; filename="${path.basename(filePath)}"`,
+        "Content-Type": bunFile.type,
         "Content-Length": bunFile.size.toString(),
         "Cache-Control": "no-store",
       };
-
-      return new Response(bunFile.stream());
-    } catch (error) {
+      return file(filePath);
+    } catch {
       set.status = 500;
       return new Response("Internal server error", { status: 500 });
     }
