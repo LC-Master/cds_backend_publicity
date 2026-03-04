@@ -22,6 +22,7 @@ import { parseSchema } from "@src/lib/parseSchema";
 import { HealthService } from "./health.service";
 import { healthEnum } from "@src/enums/health.enum";
 import { cmsApiUrl } from "@src/lib/cms-url";
+import { logMemory, runGcIfConfigured } from "@src/lib/memory";
 
 /**
  * @class SyncService
@@ -233,6 +234,7 @@ export abstract class SyncService {
    */
   public static async syncData(): Promise<ISnapshotDto | null> {
     const start_at = new Date();
+    logMemory("sync:start");
     logger.info({
       message: "Sync process started",
       time: start_at.toLocaleString(),
@@ -245,9 +247,11 @@ export abstract class SyncService {
       throw new Error("Failed to fetch DTO");
     }
     const dto = parseSchema<ISnapshotDto>(data, snapshotSchema);
+    logMemory("sync:after-parse", { version: dto.meta.version });
     const canSync = await this.tryStartSync(dto.meta.version);
     if (!canSync.canSync && canSync.type === typeSyncEnum.Syncing) {
       logger.info("Sync already in progress. Aborting new sync attempt.");
+      logMemory("sync:aborted-syncing");
       return null;
     }
     let forcedMissingIds: string[] = [];
@@ -256,6 +260,7 @@ export abstract class SyncService {
       if (forcedMissingIds.length === 0) {
         logger.info("No changes detected in DTO version. Sync not required.");
         this.reportHealth(healthEnum.SUCCESS, start_at, new Date());
+        logMemory("sync:skipped-no-change");
         return dto;
       }
       logger.warn(
@@ -265,6 +270,7 @@ export abstract class SyncService {
 
     try {
       const mediaList = extractMediaList(dto);
+      logMemory("sync:before-media-check", { mediaCandidates: mediaList.length });
 
       if (!mediaList || mediaList.length === 0) {
         throw new Error("DTO contains no media entries to process.");
@@ -279,6 +285,7 @@ export abstract class SyncService {
         mediaList,
         forcedMissingIds
       );
+      logMemory("sync:after-missing-files", { pendingDownloads: syncedFiles.length });
 
       if (syncedFiles.length > 0) {
         logger.info({
@@ -287,6 +294,7 @@ export abstract class SyncService {
         });
 
         const files = await StorageService.downloadAndVerifyFiles(syncedFiles);
+        logMemory("sync:after-download", { downloadedBatch: files.length });
 
         logger.info({
           message: "Download finished",
@@ -298,6 +306,7 @@ export abstract class SyncService {
           message: "Sync completed",
           filesProcessed: savedFiles.length,
         });
+        logMemory("sync:after-save", { filesProcessed: savedFiles.length });
       }
 
       logger.info({
@@ -307,14 +316,18 @@ export abstract class SyncService {
       await PlaylistDataRepository.saveVersion(dto);
       await this.finishSync(dto.meta.version);
       this.reportHealth(healthEnum.SUCCESS, start_at, new Date());
+      logMemory("sync:success", { version: dto.meta.version });
       return dto;
     } catch (err: { message: string } | any) {
       logger.error({ message: `Sync failed services`, error: err.message });
       this.reportHealth(healthEnum.FAILED, start_at, new Date(), err.message);
       await this.finishSync(dto?.meta?.version ?? 'unknown', err.message);
+      logMemory("sync:failed", { error: err.message });
       return null;
     } finally {
       await StorageService.cleanTempFolder();
+      runGcIfConfigured("sync:after-gc");
+      logMemory("sync:finally");
     }
   }
   public static reportHealth(status: healthEnum, start_at: Date | null, end_at: Date | null, errorMessage?: string): void {

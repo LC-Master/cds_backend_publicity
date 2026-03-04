@@ -165,4 +165,16 @@ export const configSchema = z.object({
       "Tiempo en segundos antes de que una solicitud fetch agote el tiempo de espera"
     )
     .default(30),
+
+  MEMORY_DIAGNOSTICS: z.coerce
+    .boolean({
+      error: "MEMORY_DIAGNOSTICS debe ser booleano",
+    })
+    .default(false),
+
+  ENABLE_GC_AFTER_SYNC: z.coerce
+    .boolean({
+      error: "ENABLE_GC_AFTER_SYNC debe ser booleano",
+    })
+    .default(false),
 });
