@@ -11,31 +11,37 @@ import { CONFIG } from "@src/config/config";
 export const mediaRoute = new Elysia().get(
   "/media/*",
   async ({ request, set }) => {
-    const url = new URL(request.url);
-    const relative = decodeURIComponent(
-      url.pathname.replace(/^\/api\/media\//, "")
-    );
-    const normalized = path.normalize(relative);
-    const filePath = path.join(CONFIG.MEDIA_PATH, normalized);
+    try {
+      const url = new URL(request.url);
+      const relative = decodeURIComponent(
+        url.pathname.replace(/^\/api\/media\//, "")
+      );
+      const normalized = path.normalize(relative);
+      const filePath = path.join(CONFIG.MEDIA_PATH, normalized);
 
-    const baseResolved = path.resolve(CONFIG.MEDIA_PATH);
-    const targetResolved = path.resolve(filePath);
-    if (!targetResolved.startsWith(baseResolved)) {
-      set.status = 400;
-      return new Response("Invalid path", { status: 400 });
+      const baseResolved = path.resolve(CONFIG.MEDIA_PATH);
+      const targetResolved = path.resolve(filePath);
+      if (!targetResolved.startsWith(baseResolved)) {
+        set.status = 400;
+        return new Response("Invalid path", { status: 400 });
+      }
+
+      const bunFile = Bun.file(filePath);
+
+      if (!(await bunFile.exists())) {
+        set.status = 404;
+        return new Response("Not found", { status: 404 });
+      }
+
+      set.headers = {
+        "Cache-Control": "no-store",
+      };
+      return file(filePath);
+    } catch {
+      set.status = 500;
+      return new Response("Internal server error", { status: 500 });
+    } finally {
+      Bun.gc(true);
     }
-
-    const bunFile = Bun.file(filePath);
-
-    if (!(await bunFile.exists())) {
-      set.status = 404;
-      return new Response("Not found", { status: 404 });
-    }
-
-    // Usa helper file() de Elysia para streaming sin caching y sin buffers extra.
-    set.headers = {
-      "Cache-Control": "no-store",
-    };
-    return file(filePath);
   }
 );
