@@ -27,7 +27,6 @@ export default async function fileStreamProvider(id: string): Promise<Response> 
       },
       signal: controller.signal,
     });
-    clearTimeout(timeoutId);
 
     if (!res.ok) {
       switch (res.status) {
@@ -57,5 +56,7 @@ export default async function fileStreamProvider(id: string): Promise<Response> 
       message: `[fileStreamProvider] Error al descargar ID ${id}: ${error}`,
     });
     throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }

@@ -309,15 +309,17 @@ export abstract class StorageService {
 
       if (orphanMedia.length === 0) return;
 
-      orphanMedia.forEach(async (media) => {
-        try {
-          if (await Bun.file(media.localPath).exists()) {
-            await Bun.file(media.localPath).delete();
+      await Promise.allSettled(
+        orphanMedia.map(async (media) => {
+          try {
+            if (await Bun.file(media.localPath).exists()) {
+              await Bun.file(media.localPath).delete();
+            }
+          } catch (err) {
+            logger.error(`Error deleting file for media ${media.id}: ${err}`);
           }
-        } catch (err) {
-          logger.error(`Error deleting file for media ${media.id}: ${err}`);
-        }
-      });
+        })
+      );
 
       await prisma.media.deleteMany({
         where: { id: { in: orphanMedia.map((m) => m.id) } },
@@ -400,7 +402,7 @@ export abstract class StorageService {
     }
     try {
       const entries = await fs.readdir(filePath, { withFileTypes: true });
-      entries.forEach(async (entry) => {
+      for (const entry of entries) {
         const entryPath = path.join(filePath, entry.name);
         try {
           if (entry.isFile() || entry.isSymbolicLink()) {
@@ -412,7 +414,7 @@ export abstract class StorageService {
         } catch (err) {
           logger.error(`Error deleting ${entryPath}: ${err}`);
         }
-      });
+      }
       logger.info(`Successfully cleared files at path: ${filePath}`);
     } catch (err) {
       logger.error(`Error reading path ${filePath}: ${err}`);
