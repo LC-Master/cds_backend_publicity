@@ -13,9 +13,13 @@ mock.module("../src/providers/logger.provider", () => ({
 }));
 
 const playlistDir = path.join(process.cwd(), "playlist");
+const mediaDir = path.join(process.cwd(), "Media");
 
 afterEach(async () => {
+  const { PlaylistService } = await import("../src/services/playlist.service");
+  PlaylistService._resetRecoverySyncStateForTests();
   await fs.rm(playlistDir, { recursive: true, force: true });
+  await fs.rm(mediaDir, { recursive: true, force: true });
 });
 
 describe("PlaylistService", () => {
@@ -29,7 +33,10 @@ describe("PlaylistService", () => {
     const originalRemoveOrphanMedia = StorageService.removeOrphanMedia;
     prisma.media.findMany = mock(async () => [{ id: "m1" }]) as unknown as typeof prisma.media.findMany;
     StorageService.pathExists = mock(async () => true) as unknown as typeof StorageService.pathExists;
-    MediaRepository.getFilesDownloaded = mock(async () => ([{ id: "m1" }])) as any;
+    await fs.mkdir(mediaDir, { recursive: true });
+    const mediaPath = path.join(mediaDir, "m1.mp4");
+    await Bun.write(mediaPath, "ok");
+    MediaRepository.getFilesDownloaded = mock(async () => ([{ id: "m1", localPath: mediaPath }])) as any;
     StorageService.removeOrphanMedia = mock(async () => undefined) as any;
 
     const dto: ISnapshotDto = {
@@ -86,11 +93,16 @@ describe("PlaylistService", () => {
     const { StorageService } = await import("../src/services/storage.service");
     const { MediaRepository } = await import("../src/repository/media.repository");
     const { SyncService } = await import("../src/services/sync.service");
+    const { prisma } = await import("../src/providers/prisma");
+    const { syncEventInstance } = await import("../src/event/syncEvent");
     const originalPathExists = StorageService.pathExists;
     const originalGetFilesDownloaded = MediaRepository.getFilesDownloaded;
     const originalRemoveOrphanMedia = StorageService.removeOrphanMedia;
     const originalSyncData = SyncService.syncData;
-    const syncDataMock = mock(async () => null);
+    const originalSyncStateFindUnique = prisma.syncState.findUnique;
+    const originalEmit = syncEventInstance.emit;
+    const syncDataMock = mock(async () => dto);
+    const emitMock = mock(() => true);
 
     StorageService.pathExists = mock(async () => true) as unknown as typeof StorageService.pathExists;
     MediaRepository.getFilesDownloaded = mock(async () => ([
@@ -99,8 +111,10 @@ describe("PlaylistService", () => {
         localPath: path.join(process.cwd(), "Media", "m1.mp4"),
       },
     ])) as any;
+    prisma.syncState.findUnique = mock(async () => ({ syncing: false })) as any;
     StorageService.removeOrphanMedia = mock(async () => undefined) as any;
     SyncService.syncData = syncDataMock as any;
+    syncEventInstance.emit = emitMock as any;
 
     const dto: ISnapshotDto = {
       meta: { version: "hash-124", generated_at: new Date() },
@@ -140,8 +154,11 @@ describe("PlaylistService", () => {
     MediaRepository.getFilesDownloaded = originalGetFilesDownloaded;
     StorageService.removeOrphanMedia = originalRemoveOrphanMedia;
     SyncService.syncData = originalSyncData;
+    prisma.syncState.findUnique = originalSyncStateFindUnique;
+    syncEventInstance.emit = originalEmit;
 
     expect(result.campaigns.length).toBe(0);
     expect(syncDataMock).toHaveBeenCalledTimes(1);
+    expect(emitMock).toHaveBeenCalledWith("dto:updated", true);
   });
 });

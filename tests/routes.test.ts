@@ -2,8 +2,9 @@ import { describe, expect, mock, test } from "bun:test";
 import Elysia from "elysia";
 import { healthRoute } from "../src/routes/health.route";
 import { playlistRoute } from "../src/routes/playlist.route";
-import { MediaRepository } from "../src/repository/media.repository";
+import { PlaylistService } from "../src/services/playlist.service";
 import { SyncService } from "../src/services/sync.service";
+import { prisma } from "../src/providers/prisma";
 import path from "path";
 import fs from "fs/promises";
 
@@ -40,14 +41,13 @@ describe("routes", () => {
   test("playlist route returns 409 when referenced media is missing", async () => {
     const app = new Elysia().use(playlistRoute);
     const playlistPath = path.join(process.cwd(), "playlist", "playlist.json");
-    const originalGetFilesDownloaded = MediaRepository.getFilesDownloaded;
     const originalSyncData = SyncService.syncData;
+    const originalSyncStateFindUnique = prisma.syncState.findUnique;
     const syncDataMock = mock(async () => null);
 
-    MediaRepository.getFilesDownloaded = async () => [
-      { id: "m1", localPath: path.join(process.cwd(), "Media", "m1.mp4") },
-    ];
+    PlaylistService._resetRecoverySyncStateForTests();
     SyncService.syncData = syncDataMock as any;
+    prisma.syncState.findUnique = mock(async () => ({ syncing: false })) as any;
 
     await Bun.write(
       playlistPath,
@@ -77,8 +77,8 @@ describe("routes", () => {
       await Bun.sleep(20);
       expect(syncDataMock).toHaveBeenCalledTimes(1);
     } finally {
-      MediaRepository.getFilesDownloaded = originalGetFilesDownloaded;
       SyncService.syncData = originalSyncData;
+      prisma.syncState.findUnique = originalSyncStateFindUnique;
     }
   });
 });

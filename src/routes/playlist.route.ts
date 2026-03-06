@@ -5,7 +5,6 @@
  */
 import { CONFIG } from "@src/config/config";
 import { logger } from "@src/providers/logger.provider";
-import { MediaRepository } from "@src/repository/media.repository";
 import { Unauthorized } from "@src/schemas/Unauthorized.schema";
 import { PlaylistService } from "@src/services/playlist.service";
 import Elysia, { file, t } from "elysia";
@@ -57,18 +56,9 @@ export const playlistRoute = new Elysia({
         }
 
         if (requiredIds.size > 0) {
-          const downloadedMedia = await MediaRepository.getFilesDownloaded();
-          const downloadedMap = new Map(
-            downloadedMedia.map((media) => [media.id, media.localPath])
+          const missingMediaIds = await PlaylistService.getMissingMediaIdsOnDisk(
+            requiredIds
           );
-
-          const missingMediaIds: string[] = [];
-          for (const mediaId of requiredIds) {
-            const localPath = downloadedMap.get(mediaId);
-            if (!localPath || !(await Bun.file(localPath).exists())) {
-              missingMediaIds.push(mediaId);
-            }
-          }
 
           if (missingMediaIds.length > 0) {
             PlaylistService.requestRecoverySync(missingMediaIds);

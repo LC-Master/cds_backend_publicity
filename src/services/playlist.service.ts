@@ -14,6 +14,8 @@ import { extractMediaList } from "@src/lib/campaignHelpers";
 import { CONFIG } from "@src/config/config";
 import { MediaRepository } from "@src/repository/media.repository";
 import { SyncService } from "./sync.service";
+import { prisma } from "@src/providers/prisma";
+import { syncEventInstance } from "@src/event/syncEvent";
 /**
  * Servicio para generar la lista de reproducción (`playlist.json`) basada en campañas activas.
  * @class PlaylistService
@@ -21,7 +23,7 @@ import { SyncService } from "./sync.service";
 export abstract class PlaylistService {
   private static recoverySyncInFlight = false;
   private static lastRecoverySyncAt = 0;
-  private static readonly RECOVERY_SYNC_COOLDOWN_MS = 60_000;
+  private static readonly RECOVERY_SYNC_COOLDOWN_MS = 10_000;
 
   /**
    * Dispara una sincronización de recuperación en background cuando faltan archivos físicos.
@@ -46,11 +48,20 @@ export abstract class PlaylistService {
 
     void (async () => {
       try {
+        const syncState = await prisma.syncState.findUnique({ where: { id: 1 } });
+        if (syncState?.syncing) {
+          logger.info("Recovery sync skipped because another sync is already in progress.");
+          return;
+        }
+
         logger.warn({
           message: "Missing physical media detected during playlist generation. Requesting recovery sync.",
           missingCount: missingIds.length,
         });
-        await SyncService.syncData();
+        const syncResult = await SyncService.syncData();
+        if (syncResult) {
+          syncEventInstance.emit("dto:updated", true);
+        }
       } catch (err: any) {
         logger.error({
           message: "Recovery sync request failed",
@@ -67,6 +78,40 @@ export abstract class PlaylistService {
    */
   public static requestRecoverySync(missingIds: string[]): void {
     this.requestRecoverySyncIfNeeded(missingIds);
+  }
+
+  // Solo para tests: evita dependencia del estado estatico entre suites.
+  public static _resetRecoverySyncStateForTests(): void {
+    this.recoverySyncInFlight = false;
+    this.lastRecoverySyncAt = 0;
+  }
+
+  private static normalizeMediaId(id: string): string {
+    return id.trim().toLowerCase();
+  }
+
+  /**
+   * Verifica en disco si existen los IDs de media requeridos (case-insensitive).
+   */
+  public static async getMissingMediaIdsOnDisk(
+    mediaIds: Iterable<string>
+  ): Promise<string[]> {
+    const files = (await StorageService.listDirectory(CONFIG.MEDIA_PATH)) || [];
+    const physicalIds = new Set(
+      files
+        .filter((filename) => filename !== "temp")
+        .map((filename) => path.parse(filename).name.toLowerCase())
+    );
+
+    const missing: string[] = [];
+    for (const mediaId of mediaIds) {
+      const normalized = this.normalizeMediaId(mediaId);
+      if (!physicalIds.has(normalized)) {
+        missing.push(mediaId);
+      }
+    }
+
+    return missing;
   }
 
   /**
@@ -101,15 +146,14 @@ export abstract class PlaylistService {
     const missingPhysicalMediaIds: string[] = [];
 
     for (const media of downloadedMedia) {
-      // Compatibilidad con mocks/tests antiguos que solo exponen id.
       if (!media.localPath) {
-        mediaIds.add(media.id);
+        missingPhysicalMediaIds.push(media.id);
         continue;
       }
 
       const existsOnDisk = await Bun.file(media.localPath).exists();
       if (existsOnDisk) {
-        mediaIds.add(media.id);
+        mediaIds.add(this.normalizeMediaId(media.id));
       } else {
         missingPhysicalMediaIds.push(media.id);
       }
@@ -117,7 +161,9 @@ export abstract class PlaylistService {
 
     this.requestRecoverySync(missingPhysicalMediaIds);
 
-    const place_holder_downloaded = place_holder ? mediaIds.has(place_holder.id) : false;
+    const place_holder_downloaded = place_holder
+      ? mediaIds.has(this.normalizeMediaId(place_holder.id))
+      : false;
 
     if (place_holder && !place_holder_downloaded) {
       activeMediaIds.push(place_holder.id);
@@ -126,10 +172,10 @@ export abstract class PlaylistService {
     const campaigns = activeCampaigns.map((campaign) => {
       const am = campaign.slots.am
         .map((slot) => mediaItems(slot, campaign))
-        .filter((item) => mediaIds.has(item.id));
+        .filter((item) => mediaIds.has(this.normalizeMediaId(item.id)));
       const pm = campaign.slots.pm
         .map((slot) => mediaItems(slot, campaign))
-        .filter((item) => mediaIds.has(item.id));
+        .filter((item) => mediaIds.has(this.normalizeMediaId(item.id)));
 
       return {
         id: campaign.id,
