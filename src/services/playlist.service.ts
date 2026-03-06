@@ -10,7 +10,6 @@ import path from "path";
 import fs from "fs/promises";
 import { logger } from "../providers/logger.provider";
 import { StorageService } from "./storage.service";
-import { extractMediaList } from "@src/lib/campaignHelpers";
 import { CONFIG } from "@src/config/config";
 import { MediaRepository } from "@src/repository/media.repository";
 import { SyncService } from "./sync.service";
@@ -58,7 +57,7 @@ export abstract class PlaylistService {
           message: "Missing physical media detected during playlist generation. Requesting recovery sync.",
           missingCount: missingIds.length,
         });
-        const syncResult = await SyncService.syncData();
+        const syncResult = await SyncService.syncData(missingIds);
         if (syncResult) {
           syncEventInstance.emit("dto:updated", true);
         }
@@ -131,7 +130,10 @@ export abstract class PlaylistService {
     });
 
     const place_holder = dto.data.place_holder ? { id: dto.data.place_holder.id, fileType: dto.data.place_holder.name.split(".").pop() || "unknown" } : null;
-    const activeMediaIds = extractMediaList(dto).map((slot) => slot.id);
+    const activeMediaIds = activeCampaigns.flatMap((campaign) => [
+      ...campaign.slots.am.map((slot) => slot.id),
+      ...campaign.slots.pm.map((slot) => slot.id),
+    ]);
 
     const mediaItems = (slot: FileDto, campaign: Campaign) => ({
       id: slot.id,
@@ -144,18 +146,38 @@ export abstract class PlaylistService {
     const downloadedMedia = await MediaRepository.getFilesDownloaded();
     const mediaIds = new Set<string>();
     const missingPhysicalMediaIds: string[] = [];
+    const requiredByNormalized = new Map<string, string>();
 
-    for (const media of downloadedMedia) {
-      if (!media.localPath) {
-        missingPhysicalMediaIds.push(media.id);
+    for (const mediaId of activeMediaIds) {
+      const normalized = this.normalizeMediaId(mediaId);
+      if (!requiredByNormalized.has(normalized)) {
+        requiredByNormalized.set(normalized, mediaId);
+      }
+    }
+
+    if (place_holder?.id) {
+      const normalizedPlaceholderId = this.normalizeMediaId(place_holder.id);
+      if (!requiredByNormalized.has(normalizedPlaceholderId)) {
+        requiredByNormalized.set(normalizedPlaceholderId, place_holder.id);
+      }
+    }
+
+    const downloadedByNormalized = new Map(
+      downloadedMedia.map((media) => [this.normalizeMediaId(media.id), media])
+    );
+
+    for (const [normalizedId, originalId] of requiredByNormalized) {
+      const media = downloadedByNormalized.get(normalizedId);
+      if (!media?.localPath) {
+        missingPhysicalMediaIds.push(originalId);
         continue;
       }
 
       const existsOnDisk = await Bun.file(media.localPath).exists();
       if (existsOnDisk) {
-        mediaIds.add(this.normalizeMediaId(media.id));
+        mediaIds.add(normalizedId);
       } else {
-        missingPhysicalMediaIds.push(media.id);
+        missingPhysicalMediaIds.push(originalId);
       }
     }
 
