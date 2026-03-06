@@ -81,4 +81,67 @@ describe("PlaylistService", () => {
     expect(result.campaigns[0].pm.length).toBe(0);
     expect(result.place_holder).toBeNull();
   });
+
+  test("requests recovery sync when DB media is missing on disk", async () => {
+    const { StorageService } = await import("../src/services/storage.service");
+    const { MediaRepository } = await import("../src/repository/media.repository");
+    const { SyncService } = await import("../src/services/sync.service");
+    const originalPathExists = StorageService.pathExists;
+    const originalGetFilesDownloaded = MediaRepository.getFilesDownloaded;
+    const originalRemoveOrphanMedia = StorageService.removeOrphanMedia;
+    const originalSyncData = SyncService.syncData;
+    const syncDataMock = mock(async () => null);
+
+    StorageService.pathExists = mock(async () => true) as unknown as typeof StorageService.pathExists;
+    MediaRepository.getFilesDownloaded = mock(async () => ([
+      {
+        id: "m1",
+        localPath: path.join(process.cwd(), "Media", "m1.mp4"),
+      },
+    ])) as any;
+    StorageService.removeOrphanMedia = mock(async () => undefined) as any;
+    SyncService.syncData = syncDataMock as any;
+
+    const dto: ISnapshotDto = {
+      meta: { version: "hash-124", generated_at: new Date() },
+      data: {
+        store_id: 201,
+        campaigns: [
+          {
+            id: "c1",
+            title: "T1",
+            department: "D1",
+            agreements: ["A1"],
+            start_at: new Date(Date.now() - 1000),
+            end_at: new Date(Date.now() + 1000),
+            slots: {
+              am: [
+                {
+                  id: "m1",
+                  name: "file-a.mp4",
+                  checksum: "0123456789abcdef0123456789abcdef",
+                  duration_seconds: 10,
+                  position: 1,
+                },
+              ],
+              pm: [],
+            },
+          },
+        ],
+      },
+    };
+
+    const { PlaylistService } = await import("../src/services/playlist.service");
+    const result = await PlaylistService.generate(dto);
+
+    await Bun.sleep(20);
+
+    StorageService.pathExists = originalPathExists;
+    MediaRepository.getFilesDownloaded = originalGetFilesDownloaded;
+    StorageService.removeOrphanMedia = originalRemoveOrphanMedia;
+    SyncService.syncData = originalSyncData;
+
+    expect(result.campaigns.length).toBe(0);
+    expect(syncDataMock).toHaveBeenCalledTimes(1);
+  });
 });

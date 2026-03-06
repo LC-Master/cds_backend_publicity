@@ -1,6 +1,11 @@
 import { describe, expect, mock, test } from "bun:test";
 import { typeSyncEnum } from "../src/enums/typeSync.enum";
 
+const fetchAuthMock = mock(async () => dto as any);
+mock.module("../src/providers/fetchAuth", () => ({
+  fetchAuth: fetchAuthMock,
+}));
+
 const dto = {
   meta: { version: "v1", generated_at: new Date() },
   data: {
@@ -35,14 +40,7 @@ describe("SyncService", () => {
     Bun.env.API_KEY_CMS = "token";
     Bun.env.CMS_BASE_URL = "https://example.com";
     Bun.env.FETCH_TIMEOUT_SECONDS = "1";
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = mock(
-      async () =>
-        new Response(JSON.stringify(dto), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        })
-    ) as unknown as typeof fetch;
+    fetchAuthMock.mockImplementation(async () => dto as any);
 
     const { prisma } = await import("../src/providers/prisma");
     const { StorageService } = await import("../src/services/storage.service");
@@ -121,21 +119,14 @@ describe("SyncService", () => {
     StorageService.cleanTempFolder = originalClean;
     MediaRepository.saveMany = originalSaveMany;
     PlaylistDataRepository.saveVersion = originalSaveVersion;
-    globalThis.fetch = originalFetch;
+    fetchAuthMock.mockClear();
   });
 
   test("starts new sync when no state exists", async () => {
     Bun.env.API_KEY_CMS = "token";
     Bun.env.CMS_BASE_URL = "https://example.com";
     Bun.env.FETCH_TIMEOUT_SECONDS = "1";
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = mock(
-      async () =>
-        new Response(JSON.stringify(dto), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        })
-    ) as unknown as typeof fetch;
+    fetchAuthMock.mockImplementation(async () => dto as any);
 
     const { prisma } = await import("../src/providers/prisma");
     const { StorageService } = await import("../src/services/storage.service");
@@ -204,6 +195,6 @@ describe("SyncService", () => {
     StorageService.cleanTempFolder = originalClean;
     MediaRepository.saveMany = originalSaveMany;
     PlaylistDataRepository.saveVersion = originalSaveVersion;
-    globalThis.fetch = originalFetch;
+    fetchAuthMock.mockClear();
   });
 });

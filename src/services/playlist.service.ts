@@ -13,11 +13,55 @@ import { StorageService } from "./storage.service";
 import { extractMediaList } from "@src/lib/campaignHelpers";
 import { CONFIG } from "@src/config/config";
 import { MediaRepository } from "@src/repository/media.repository";
+import { SyncService } from "./sync.service";
 /**
  * Servicio para generar la lista de reproducción (`playlist.json`) basada en campañas activas.
  * @class PlaylistService
  */
 export abstract class PlaylistService {
+  private static recoverySyncInFlight = false;
+  private static lastRecoverySyncAt = 0;
+  private static readonly RECOVERY_SYNC_COOLDOWN_MS = 60_000;
+
+  /**
+   * Dispara una sincronización de recuperación en background cuando faltan archivos físicos.
+   * Incluye cooldown e indicador en memoria para evitar loops y llamadas concurrentes.
+   */
+  private static requestRecoverySyncIfNeeded(missingIds: string[]): void {
+    if (missingIds.length === 0) return;
+
+    if (this.recoverySyncInFlight) {
+      logger.info("Recovery sync already in progress. Skipping new request.");
+      return;
+    }
+
+    const now = Date.now();
+    if (now - this.lastRecoverySyncAt < this.RECOVERY_SYNC_COOLDOWN_MS) {
+      logger.info("Recovery sync skipped due to cooldown.");
+      return;
+    }
+
+    this.lastRecoverySyncAt = now;
+    this.recoverySyncInFlight = true;
+
+    void (async () => {
+      try {
+        logger.warn({
+          message: "Missing physical media detected during playlist generation. Requesting recovery sync.",
+          missingCount: missingIds.length,
+        });
+        await SyncService.syncData();
+      } catch (err: any) {
+        logger.error({
+          message: "Recovery sync request failed",
+          error: err?.message ?? String(err),
+        });
+      } finally {
+        this.recoverySyncInFlight = false;
+      }
+    })();
+  }
+
   /**
    * Genera o limpia `playlist.json` según campañas activas en el DTO.
    * @param {ISnapshotDto} dto - DTO sincronizado con campañas y slots.
@@ -45,15 +89,32 @@ export abstract class PlaylistService {
       position: slot.position
     });
 
-    const media = await MediaRepository.getFilesDownloaded();
+    const downloadedMedia = await MediaRepository.getFilesDownloaded();
+    const mediaIds = new Set<string>();
+    const missingPhysicalMediaIds: string[] = [];
 
-    const place_holder_downloaded = media.some((m) => m.id === place_holder?.id);
+    for (const media of downloadedMedia) {
+      // Compatibilidad con mocks/tests antiguos que solo exponen id.
+      if (!media.localPath) {
+        mediaIds.add(media.id);
+        continue;
+      }
+
+      const existsOnDisk = await Bun.file(media.localPath).exists();
+      if (existsOnDisk) {
+        mediaIds.add(media.id);
+      } else {
+        missingPhysicalMediaIds.push(media.id);
+      }
+    }
+
+    this.requestRecoverySyncIfNeeded(missingPhysicalMediaIds);
+
+    const place_holder_downloaded = place_holder ? mediaIds.has(place_holder.id) : false;
 
     if (place_holder && !place_holder_downloaded) {
       activeMediaIds.push(place_holder.id);
     }
-
-    const mediaIds = new Set(media.map((m) => m.id));
 
     const campaigns = activeCampaigns.map((campaign) => {
       const am = campaign.slots.am

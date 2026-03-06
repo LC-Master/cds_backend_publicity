@@ -9,39 +9,49 @@ mock.module("../src/providers/logger.provider", () => ({
   },
 }));
 
+const fetchAuthMock = mock(async () => ({ ok: true }));
+mock.module("@src/providers/fetchAuth", () => ({
+  fetchAuth: fetchAuthMock,
+}));
+mock.module("../src/providers/fetchAuth", () => ({
+  fetchAuth: fetchAuthMock,
+}));
+
 describe("HealthService", () => {
   test("reports health to CMS", async () => {
     const { StorageService } = await import("../src/services/storage.service");
+    const { MediaRepository } = await import("../src/repository/media.repository");
     const { prisma } = await import("../src/providers/prisma");
     const { healthEnum } = await import("../src/enums/health.enum");
     const originalGetDiskInfo = StorageService.getDiskInfo;
-    const originalFindMany = prisma.media.findMany;
-    const originalCount = prisma.media.count;
+    const originalGetFilesWithError = MediaRepository.getFilesWithError;
+    const originalGetCount = MediaRepository.getCount;
     const originalSyncState = prisma.syncState.findUnique;
+    const originalSyncStateUpdate = prisma.syncState.update;
     const originalPlaylist = prisma.playlistData.findUnique;
 
     StorageService.getDiskInfo = mock(() => ({ free: 1, size: 2, used: 1 }));
-    prisma.media.findMany = mock(async () => []) as any;
-    prisma.media.count = mock(async () => 0) as any;
+    MediaRepository.getFilesWithError = mock(async () => []) as any;
+    MediaRepository.getCount = mock(async () => 0) as any;
     prisma.syncState.findUnique = mock(
       async () => ({ syncing: false, syncVersion: "hash" })
     ) as any;
+    prisma.syncState.update = mock(async () => ({})) as any;
     prisma.playlistData.findUnique = mock(async () => ({ version: "hash" })) as any;
 
     Bun.env.CMS_BASE_URL = "https://example.com";
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = mock(async () => new Response("", { status: 200 })) as unknown as typeof fetch;
 
     const { HealthService } = await import("../src/services/health.service");
     await HealthService.isHealthy(healthEnum.SYNCING, new Date(), new Date());
 
-    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
-    globalThis.fetch = originalFetch;
+    expect(fetchAuthMock).toHaveBeenCalledTimes(1);
+    fetchAuthMock.mockClear();
 
     StorageService.getDiskInfo = originalGetDiskInfo;
-    prisma.media.findMany = originalFindMany;
-    prisma.media.count = originalCount;
+    MediaRepository.getFilesWithError = originalGetFilesWithError;
+    MediaRepository.getCount = originalGetCount;
     prisma.syncState.findUnique = originalSyncState;
+    prisma.syncState.update = originalSyncStateUpdate;
     prisma.playlistData.findUnique = originalPlaylist;
   });
 });

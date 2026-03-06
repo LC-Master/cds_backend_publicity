@@ -14,7 +14,7 @@ export const mediaRoute = new Elysia().get(
     try {
       const url = new URL(request.url);
       const relative = decodeURIComponent(
-        url.pathname.replace(/^\/api\/media\//, "")
+        url.pathname.replace(/^\/(?:api\/)?media\//, "")
       );
       const normalized = path.normalize(relative);
       const filePath = path.join(CONFIG.MEDIA_PATH, normalized);
