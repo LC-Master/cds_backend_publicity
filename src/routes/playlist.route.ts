@@ -5,9 +5,12 @@
  */
 import { CONFIG } from "@src/config/config";
 import { logger } from "@src/providers/logger.provider";
+import { MediaRepository } from "@src/repository/media.repository";
 import { Unauthorized } from "@src/schemas/Unauthorized.schema";
+import { PlaylistService } from "@src/services/playlist.service";
 import Elysia, { file, t } from "elysia";
 import path from "path";
+import { IPlaylistData } from "../../types/playlist.type";
 
 /**
  * Endpoint para servir el archivo `playlist.json` mediante Elysia.
@@ -36,6 +39,51 @@ export const playlistRoute = new Elysia({
         });
         return status(404, { error: "Playlist not found" });
       }
+
+      const parsed = (await Bun.file(playlistPath).json().catch(() => null)) as
+        | IPlaylistData
+        | null;
+
+      if (parsed && Array.isArray(parsed.campaigns)) {
+        const requiredIds = new Set<string>();
+
+        for (const campaign of parsed.campaigns) {
+          for (const item of campaign.am) requiredIds.add(item.id);
+          for (const item of campaign.pm) requiredIds.add(item.id);
+        }
+
+        if (parsed.place_holder?.id) {
+          requiredIds.add(parsed.place_holder.id);
+        }
+
+        if (requiredIds.size > 0) {
+          const downloadedMedia = await MediaRepository.getFilesDownloaded();
+          const downloadedMap = new Map(
+            downloadedMedia.map((media) => [media.id, media.localPath])
+          );
+
+          const missingMediaIds: string[] = [];
+          for (const mediaId of requiredIds) {
+            const localPath = downloadedMap.get(mediaId);
+            if (!localPath || !(await Bun.file(localPath).exists())) {
+              missingMediaIds.push(mediaId);
+            }
+          }
+
+          if (missingMediaIds.length > 0) {
+            PlaylistService.requestRecoverySync(missingMediaIds);
+            logger.warn({
+              message:
+                "Playlist integrity check failed on request. Missing media detected.",
+              requiredMediaCount: requiredIds.size,
+            });
+            return status(409, {
+              error: "Playlist is incomplete. Please sync and retry.",
+            });
+          }
+        }
+      }
+
       return file(playlistPath);
     } catch (err) {
       logger.error({
@@ -66,6 +114,20 @@ export const playlistRoute = new Elysia({
           examples: [{ error: "Playlist not found" }],
           description:
             "Error cuando no se encuentra el archivo de la lista de reproducción",
+        }
+      ),
+      409: t.Object(
+        {
+          error: t.String({
+            examples: ["Playlist is incomplete. Please sync and retry."],
+            description:
+              "Mensaje cuando el playlist referencia media faltante en disco",
+          }),
+        },
+        {
+          title: "Playlist Incomplete",
+          description:
+            "Error cuando se detecta que el playlist contiene referencias a media inexistente",
         }
       ),
       500: t.Object(

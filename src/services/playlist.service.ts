@@ -63,6 +63,13 @@ export abstract class PlaylistService {
   }
 
   /**
+   * Punto unico para solicitar sync de recuperación desde cualquier capa.
+   */
+  public static requestRecoverySync(missingIds: string[]): void {
+    this.requestRecoverySyncIfNeeded(missingIds);
+  }
+
+  /**
    * Genera o limpia `playlist.json` según campañas activas en el DTO.
    * @param {ISnapshotDto} dto - DTO sincronizado con campañas y slots.
    * @returns {{am: any[], pm: any[]}} Estructura de playlist creada.
@@ -108,7 +115,7 @@ export abstract class PlaylistService {
       }
     }
 
-    this.requestRecoverySyncIfNeeded(missingPhysicalMediaIds);
+    this.requestRecoverySync(missingPhysicalMediaIds);
 
     const place_holder_downloaded = place_holder ? mediaIds.has(place_holder.id) : false;
 
