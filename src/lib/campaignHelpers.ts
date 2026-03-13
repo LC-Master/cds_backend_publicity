@@ -10,8 +10,8 @@ export function extractMediaList(dto: ISnapshotDto): IFile[] {
   if (!dto?.data?.campaigns) return [];
 
   const mediaList: IFile[] = dto.data.campaigns.flatMap((campaign) => {
-    const am = campaign.slots.am;
-    const pm = campaign.slots.pm;
+    const am = campaign.slots?.am ?? [];
+    const pm = campaign.slots?.pm ?? [];
 
     return [...am, ...pm].map((slot) => ({
       id: slot.id,

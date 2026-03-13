@@ -73,13 +73,13 @@ export abstract class PlaylistService {
   }
 
   /**
-   * Punto unico para solicitar sync de recuperación desde cualquier capa.
+   * Punto único para solicitar sync de recuperación desde cualquier capa.
    */
   public static requestRecoverySync(missingIds: string[]): void {
     this.requestRecoverySyncIfNeeded(missingIds);
   }
 
-  // Solo para tests: evita dependencia del estado estatico entre suites.
+  // Solo para tests: evita dependencia del estado estático entre suites.
   public static _resetRecoverySyncStateForTests(): void {
     this.recoverySyncInFlight = false;
     this.lastRecoverySyncAt = 0;
@@ -131,8 +131,8 @@ export abstract class PlaylistService {
 
     const place_holder = dto.data.place_holder ? { id: dto.data.place_holder.id, fileType: dto.data.place_holder.name.split(".").pop() || "unknown" } : null;
     const activeMediaIds = activeCampaigns.flatMap((campaign) => [
-      ...campaign.slots.am.map((slot) => slot.id),
-      ...campaign.slots.pm.map((slot) => slot.id),
+      ...(campaign.slots?.am ?? []).map((slot) => slot.id),
+      ...(campaign.slots?.pm ?? []).map((slot) => slot.id),
     ]);
 
     const mediaItems = (slot: FileDto, campaign: Campaign) => ({
@@ -192,10 +192,10 @@ export abstract class PlaylistService {
     }
 
     const campaigns = activeCampaigns.map((campaign) => {
-      const am = campaign.slots.am
+      const am = (campaign.slots?.am ?? [])
         .map((slot) => mediaItems(slot, campaign))
         .filter((item) => mediaIds.has(this.normalizeMediaId(item.id)));
-      const pm = campaign.slots.pm
+      const pm = (campaign.slots?.pm ?? [])
         .map((slot) => mediaItems(slot, campaign))
         .filter((item) => mediaIds.has(this.normalizeMediaId(item.id)));
 
