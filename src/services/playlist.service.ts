@@ -13,7 +13,6 @@ import { StorageService } from "./storage.service";
 import { CONFIG } from "@src/config/config";
 import { MediaRepository } from "@src/repository/media.repository";
 import { SyncService } from "./sync.service";
-import { prisma } from "@src/providers/prisma";
 import { syncEventInstance } from "@src/event/syncEvent";
 /**
  * Servicio para generar la lista de reproducción (`playlist.json`) basada en campañas activas.
@@ -47,12 +46,6 @@ export abstract class PlaylistService {
 
     void (async () => {
       try {
-        const syncState = await prisma.syncState.findUnique({ where: { id: 1 } });
-        if (syncState?.syncing) {
-          logger.info("Recovery sync skipped because another sync is already in progress.");
-          return;
-        }
-
         logger.warn({
           message: "Missing physical media detected during playlist generation. Requesting recovery sync.",
           missingCount: missingIds.length,
