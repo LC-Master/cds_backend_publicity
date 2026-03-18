@@ -67,9 +67,6 @@ export const playlistRoute = new Elysia({
                 "Playlist integrity check failed on request. Missing media detected.",
               requiredMediaCount: requiredIds.size,
             });
-            return status(409, {
-              error: "Playlist is incomplete. Please sync and retry.",
-            });
           }
         }
       }
@@ -104,20 +101,6 @@ export const playlistRoute = new Elysia({
           examples: [{ error: "Playlist not found" }],
           description:
             "Error cuando no se encuentra el archivo de la lista de reproducción",
-        }
-      ),
-      409: t.Object(
-        {
-          error: t.String({
-            examples: ["Playlist is incomplete. Please sync and retry."],
-            description:
-              "Mensaje cuando el playlist referencia media faltante en disco",
-          }),
-        },
-        {
-          title: "Playlist Incomplete",
-          description:
-            "Error cuando se detecta que el playlist contiene referencias a media inexistente",
         }
       ),
       500: t.Object(
