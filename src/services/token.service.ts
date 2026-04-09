@@ -17,6 +17,7 @@ import { jwtSchema } from "@src/schemas/jwt.schema";
  * @class TokenService
  */
 export default abstract class TokenService {
+  public static tokenRaw: string | null = null;
   private static readonly pathFileToken = path.join(
     process.cwd(),
     "token_api.txt"
@@ -119,8 +120,8 @@ export default abstract class TokenService {
     logger.info("Starting Argon2id hashing...");
     const hashedToken = await Bun.password.hash(token, {
       algorithm: "argon2id",
-      memoryCost: 65536,
-      timeCost: 3,
+      memoryCost: 16384,
+      timeCost: 2,
     });
 
     if (!hashedToken) throw new Error("Error hashing token");
@@ -143,7 +144,7 @@ export default abstract class TokenService {
       if (!validated) {
         throw new Error("Generated token is invalid");
       }
-
+      this.tokenRaw = token;
       const hashedToken = await this.hashToken(validated);
 
       const savedToken = await TokenRepository.save(hashedToken);
@@ -151,24 +152,24 @@ export default abstract class TokenService {
       if (!savedToken || !savedToken.key) {
         throw new Error("Error saving API key to database");
       }
+      logger.info("API key hashed and saved to database successfully.");
+      // try {
+      //   await this.createFileToken(validated);
+      //   try {
+      //     const fs = await import("fs/promises");
+      //     await fs.chmod(this.pathFileToken, 0o600);
+      //   } catch (chmodErr) {
+      //     logger.warn(
+      //       `Unable to set file permissions for API key file: ${chmodErr}`
+      //     );
+      //   }
+      // } catch (fileErr) {
+      //   logger.error(`Failed to write API key file: ${fileErr}`);
+      // }
 
-      try {
-        await this.createFileToken(validated);
-        try {
-          const fs = await import("fs/promises");
-          await fs.chmod(this.pathFileToken, 0o600);
-        } catch (chmodErr) {
-          logger.warn(
-            `Unable to set file permissions for API key file: ${chmodErr}`
-          );
-        }
-      } catch (fileErr) {
-        logger.error(`Failed to write API key file: ${fileErr}`);
-      }
-
-      logger.info(
-        "API key created and saved successfully. on path " + this.pathFileToken
-      );
+      // logger.info(
+      //   "API key created and saved successfully. on path " + this.pathFileToken
+      // );
     } catch (err: any) {
       throw new Error(`Error creating API key: ${err.message}`);
     }

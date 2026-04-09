@@ -12,15 +12,15 @@ import { dlopen } from "bun:ffi";
 
 const kernel32 = process.platform === "win32"
   ? dlopen("kernel32.dll", {
-      GetCurrentProcess: {
-        args: [],
-        returns: "ptr",
-      },
-      SetProcessWorkingSetSize: {
-        args: ["ptr", "usize", "usize"],
-        returns: "bool",
-      },
-    })
+    GetCurrentProcess: {
+      args: [],
+      returns: "ptr",
+    },
+    SetProcessWorkingSetSize: {
+      args: ["ptr", "usize", "usize"],
+      returns: "bool",
+    },
+  })
   : null;
 
 export function forceWindowsShrink() {
@@ -50,21 +50,24 @@ export function forceWindowsShrink() {
  * Plugin de arranque que ejecuta tareas iniciales (sync, limpieza, etc.) al iniciar la app.
  */
 export const startApp = new Elysia().use(authPlugin).onStart(async function () {
-  await SseTokenService.bootstrapSecurity();
-  if (!(await TokenService.tokenApiExists())) {
+  try {
+    await SseTokenService.bootstrapSecurity();
     await TokenService.createApiKey(startApp.decorator.jwt);
-  }
-  if (!await connectDb()) {
-    logger.fatal("cannot connect to database, exiting...");
+    if (!await connectDb()) {
+      logger.fatal("cannot connect to database, exiting...");
+      process.exit(1);
+    }
+    await StorageService.createLogDirIfNotExists();
+
+    await StorageService.cleanTempFolder();
+
+    await SyncService.checkSyncInStartup();
+
+    await StorageService.retryFailedDownloads();
+  } catch (err: any) {
+    logger.fatal({ message: "Startup initialization failed", error: err.message });
     process.exit(1);
   }
-  await StorageService.createLogDirIfNotExists();
-
-  await StorageService.cleanTempFolder();
-
-  await SyncService.checkSyncInStartup();
-
-  await StorageService.retryFailedDownloads();
 
   try {
     const result = await SyncService.syncData();
@@ -88,16 +91,16 @@ export const startApp = new Elysia().use(authPlugin).onStart(async function () {
       }
     }
 
-      if (process.platform === "win32") {
-        try {
-          Bun.gc(true);
-          forceWindowsShrink();
-        } catch (err) {
-          logger.warn({
-            message: "Windows shrink failed",
-            error: (err as Error)?.message ?? String(err),
-          });
-        }
+    if (process.platform === "win32") {
+      try {
+        Bun.gc(true);
+        forceWindowsShrink();
+      } catch (err) {
+        logger.warn({
+          message: "Windows shrink failed",
+          error: (err as Error)?.message ?? String(err),
+        });
       }
+    }
   }
 });

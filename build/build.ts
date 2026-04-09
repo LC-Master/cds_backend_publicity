@@ -10,18 +10,8 @@ try {
             identifiers: false,
         },
         sourcemap: "none",
-        compile: {
-            target: "bun-windows-x64",
-            outfile: 'dist/cds.exe',
-            windows: {
-                icon: 'assets/locatel.ico',
-                version: '1.0.0',
-                copyright: '© 2026 Locatel',
-                title: 'CDS Backend Service',
-                publisher: 'Locatel',
-                description: 'Servicio Backend de CDS',
-            }
-        },
+        outdir: "./dist",
+        naming: "server.ts"
     })
 
 } catch (error) {

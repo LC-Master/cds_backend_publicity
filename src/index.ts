@@ -20,6 +20,7 @@ import { apiDoc } from "./routes/openDoc.route";
 import { authMiddleware } from "./middlewares/auth.middleware";
 import { startApp } from "./plugin/startApp.plugin";
 import { authRoute } from "./routes/auth.route";
+import { internalRoute } from "./routes/internal.route";
 
 export const app = new Elysia({
   prefix: "/api"
@@ -35,6 +36,7 @@ export const app = new Elysia({
     })
   )
   .use(logMiddleware)
+  .use(internalRoute)
   .use(forceRoute)
   .use(authPlugin)
   .use(healthRoute)

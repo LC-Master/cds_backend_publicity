@@ -3,6 +3,7 @@
  * @description
  * Repositorio para acceder y persistir el `ApiKeY` en la base de datos.
  */
+import { ca } from "zod/locales";
 import { prisma } from "../providers/prisma";
 
 export abstract class TokenRepository {
@@ -27,12 +28,16 @@ export abstract class TokenRepository {
    * @param {string} hashedToken - Hash a persistir.
    * @returns {{ key: string }} Objeto con la clave guardada.
    */
-  public static async save(hashedToken: string) {
-    const result = await prisma.apiKey.upsert({
-      where: { id: 1 },
-      create: { key: hashedToken },
-      update: { key: hashedToken },
-    });
-    return { key: result.key };
+  public static async save(hashedToken: string): Promise<{ key: string }> {
+    try {
+      const result = await prisma.apiKey.upsert({
+        where: { id: 1 },
+        create: { key: hashedToken },
+        update: { key: hashedToken },
+      });
+      return { key: result.key };
+    } catch (err: any) {
+      throw new Error(`Error saving API key to database: ${err.message}`);
+    }
   }
 }

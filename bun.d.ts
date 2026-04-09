@@ -21,6 +21,7 @@ declare module "bun" {
     PLAYLIST_PATH: string;
     LOGS_PATH: string;
     SYNC_TTL_HOURS: number;
+    MASTER_KEY: string;
     DOWNLOAD_CONCURRENCY: number;
     FETCH_TIMEOUT_SECONDS: number;
   }

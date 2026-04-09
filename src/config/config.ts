@@ -14,6 +14,7 @@ const config: Env = {
   LOGS_PATH: Bun.env.LOGS_PATH || path.join(APP_BASE, "Logs"),
   VERSION: Bun.env.VERSION,
   SECRET_KEY: Bun.env.SECRET_KEY,
+  MASTER_KEY: Bun.env.MASTER_KEY,
   API_KEY_CMS: Bun.env.API_KEY_CMS,
   CMS_BASE_URL: Bun.env.CMS_BASE_URL,
   PORT: Bun.env.PORT,

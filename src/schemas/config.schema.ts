@@ -23,6 +23,13 @@ export const configSchema = z.object({
     .min(32, "PASETO_PUBLIC_KEY debe tener al menos 32 caracteres")
     .describe("Clave pública para verificar tokens PASETO")
     .default(""),
+  MASTER_KEY: z
+    .string({
+      error: "MASTER_KEY es obligatorio y tiene que ser una cadena de texto",
+    })
+    .min(16, "MASTER_KEY debe tener al menos 16 caracteres")
+    .describe("Clave maestra para autenticación interna")
+    .default(""),
   MEDIA_PATH: z
     .string({
       error: "MEDIA_PATH es obligatorio y tiene que ser una cadena de texto",
