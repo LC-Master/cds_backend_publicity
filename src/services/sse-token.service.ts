@@ -38,7 +38,7 @@ export abstract class SseTokenService {
         }
       })
 
-      await Bun.write(envPath, existingEnv.trim() + `\nPASETO_PRIVATE_KEY='${secretKey}'\nPASETO_PUBLIC_KEY='${publicKey}'\n`);
+      await Bun.write(envPath, existingEnv.trim() + `\nPASETO_PRIVATE_KEY=${secretKey}\nPASETO_PUBLIC_KEY=${publicKey}\n`);
 
       logger.info("✅ Keys generated and saved to environment.");
       logger.info("🛑 Restarting server to inject variables...");
