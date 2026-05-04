@@ -17,11 +17,11 @@ import { SseTokenService } from "@src/services/sse-token.service";
 export const startApp = new Elysia().use(authPlugin).onStart(async function () {
   try {
     await SseTokenService.bootstrapSecurity();
-    await TokenService.createApiKey(startApp.decorator.jwt);
     if (!await connectDb()) {
       logger.fatal("cannot connect to database, exiting...");
       process.exit(1);
     }
+    await TokenService.createApiKey(startApp.decorator.jwt);
     await StorageService.createLogDirIfNotExists();
 
     await StorageService.cleanTempFolder();

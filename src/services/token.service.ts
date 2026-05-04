@@ -75,6 +75,23 @@ export default abstract class TokenService {
     return token;
   }
 
+  private static extractExpFromJwt(token: string): number | null {
+    try {
+      const parts = token.split('.');
+      if (parts.length < 2) return null;
+      const b64 = parts[1];
+      // base64url -> base64
+      const pad = b64.length % 4;
+      const base64 = b64.replace(/-/g, '+').replace(/_/g, '/') + (pad ? '='.repeat(4 - pad) : '');
+      const json = Buffer.from(base64, 'base64').toString('utf8');
+      const payload = JSON.parse(json);
+      if (payload && typeof payload.exp === 'number') return payload.exp;
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
   /**
    * Valida estructura, firma JWT y hash del bearer con cache en memoria para evitar recomputar Argon2 por petición.
    */
@@ -139,10 +156,15 @@ export default abstract class TokenService {
       if (!validated) {
         throw new Error("Generated token is invalid");
       }
+
       this.tokenRaw = token;
       const hashedToken = await this.hashToken(validated);
 
-      const savedToken = await TokenRepository.save(hashedToken);
+      // extract exp from JWT payload; if not present, default to 24h
+      const exp = this.extractExpFromJwt(token);
+      const expiresAt = exp ? new Date(exp * 1000) : new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      const savedToken = await TokenRepository.save(hashedToken, expiresAt);
 
       if (!savedToken || !savedToken.key) {
         throw new Error("Error saving API key to database");

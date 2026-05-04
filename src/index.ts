@@ -5,6 +5,7 @@
  */
 import { Elysia } from "elysia";
 import { syncCrons } from "@crons/sync.crons";
+import { tokenCrons } from "@crons/token.crons";
 import { healthRoute } from "@routes/health.route";
 import { logMiddleware } from "@middlewares/log.middleware";
 import cors from "@elysiajs/cors";
@@ -45,6 +46,7 @@ export const app = new Elysia({
   .use(authRoute)
   .use(playlistRoute)
   .use(syncCrons)
+  .use(tokenCrons)
   .onError(({ code, status }) => {
     if (code === "NOT_FOUND")
       return status(404, {

@@ -28,12 +28,12 @@ export abstract class TokenRepository {
    * @param {string} hashedToken - Hash a persistir.
    * @returns {{ key: string }} Objeto con la clave guardada.
    */
-  public static async save(hashedToken: string): Promise<{ key: string }> {
+  public static async save(hashedToken: string, expiresAt: Date | null = null): Promise<{ key: string }> {
     try {
       const result = await prisma.apiKey.upsert({
         where: { id: 1 },
-        create: { key: hashedToken },
-        update: { key: hashedToken },
+        create: { key: hashedToken, expiresAt },
+        update: { key: hashedToken, expiresAt },
       });
       return { key: result.key };
     } catch (err: any) {
