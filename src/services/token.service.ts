@@ -3,10 +3,8 @@
  * @description
  * Servicio para generar, validar y gestionar la API key (token) usada por el servicio.
  * Los métodos gestionan la creación, hashing y persistencia segura del token en la base de datos,
- * y la creación de un archivo temporal `token_api.txt` con el token crudo (solo al crear).
  * Todos los comentarios están en español.
  */
-import path from "path";
 import { jwt } from "../../types/jwt.type";
 import { TokenRepository } from "@src/repository/token.repository";
 import { logger } from "@src/providers/logger.provider";
@@ -217,8 +215,7 @@ export default abstract class TokenService {
     return hashedToken;
   }
   /**
-   * Genera, valida, hashea y persiste una API key.
-   * También escribe el token crudo en `token_api.txt` (solo una vez).
+  * Genera, valida, hashea y persiste una API key.
    * @param {jwt} jwt - Instancia JWT para firmar el token.
    * @description Crea una API key segura y la guarda en la base de datos.
    * @returns {Promise<void>}
@@ -234,11 +231,6 @@ export default abstract class TokenService {
       }
 
       this.tokenRaw = token;
-      const tokenFilePath = path.join(process.cwd(), "token_api.txt");
-      const tokenFile = Bun.file(tokenFilePath);
-      if (!await tokenFile.exists()) {
-        await Bun.write(tokenFilePath, token);
-      }
       const hashedToken = await this.hashToken(validated);
 
       const exp = this.extractExpFromJwt(token);

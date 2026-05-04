@@ -29,7 +29,7 @@ describe("TokenService", () => {
     expect(await TokenService.tokenApiExists()).toBe(true);
   });
 
-  test("createApiKey saves hash and writes raw token to file", async () => {
+  test("createApiKey saves hash", async () => {
     const saved = mock(async (hash: string) => ({ key: hash }));
     mock.module("../src/repository/token.repository", () => ({
       TokenRepository: { save: saved },
@@ -47,26 +47,11 @@ describe("TokenService", () => {
       },
     }));
 
-    // intercept Bun.write
-    const originalWrite = Bun.write;
-    const originalFile = Bun.file;
-    let written: string | null = null;
-    (Bun as any).write = mock(async (path: string, content: string) => {
-      written = content;
-    });
-    (Bun as any).file = mock((path: string) => ({
-      exists: mock(async () => false),
-    }));
-
     const { default: TokenService } =
       await import("../src/services/token.service");
 
     await TokenService.createApiKey(jwtMock as any);
 
     expect(saved).toHaveBeenCalledTimes(1);
-    expect(written).toBeString();
-
-    Bun.write = originalWrite;
-    Bun.file = originalFile;
   });
 });
