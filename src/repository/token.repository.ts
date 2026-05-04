@@ -3,7 +3,6 @@
  * @description
  * Repositorio para acceder y persistir el `ApiKeY` en la base de datos.
  */
-import { ca } from "zod/locales";
 import { prisma } from "../providers/prisma";
 
 export abstract class TokenRepository {
@@ -15,11 +14,20 @@ export abstract class TokenRepository {
     const token = await prisma.apiKey.findUnique({ where: { id: 1 } });
     return token?.key || null;
   }
+
+  /**
+   * Obtiene el registro completo de ApiKey (incluye expiresAt).
+   * @returns {Promise<any|null>} Registro de ApiKey o null.
+   */
+  public static async getFull() {
+    const token = await prisma.apiKey.findUnique({ where: { id: 1 } });
+    return token || null;
+  }
   /**
    * Comprueba si existe una API key almacenada en DB.
    * @returns {Promise<boolean>} True si existe.
    */
-  public static async exists() {
+  public static async exists(): Promise<boolean> {
     const token = await prisma.apiKey.findUnique({ where: { id: 1 } });
     return !!token;
   }
@@ -39,14 +47,5 @@ export abstract class TokenRepository {
     } catch (err: any) {
       throw new Error(`Error saving API key to database: ${err.message}`);
     }
-  }
-
-  /**
-   * Obtiene la fecha de expiración almacenada para la API key (si existe).
-   * @returns {Promise<Date|null>} Fecha de expiración o null si no existe.
-   */
-  public static async getExpiry(): Promise<Date | null> {
-    const token = await prisma.apiKey.findUnique({ where: { id: 1 } });
-    return token?.expiresAt || null;
   }
 }

@@ -1,5 +1,7 @@
 import { CONFIG } from "@src/config/config";
 import TokenService from "@src/services/token.service";
+import { TokenRepository } from "@src/repository/token.repository";
+import { startApp } from "@src/plugin/startApp.plugin";
 import Elysia, { t } from "elysia";
 
 export const internalRoute = new Elysia({
@@ -9,14 +11,29 @@ export const internalRoute = new Elysia({
         tags: ["Authentication", "Internal"],
     }
 })
-    .get("/internal/handshake", ({ headers, status }) => {
+    .get("/internal/handshake", async ({ headers, status }) => {
         if (headers["x-master-key"] !== CONFIG.MASTER_KEY) {
             return status(401, { message: "Unauthorized" });
         }
-        if (!TokenService.tokenRaw) {
-            return status(500, { message: "Token not generated yet" });
+
+        // Check DB record
+        const apiKey = await TokenRepository.getFull();
+
+        const now = new Date();
+        const isExpired = !apiKey || (apiKey.expiresAt && apiKey.expiresAt <= now);
+
+        // If token raw exists and not expired, return it
+        if (TokenService.tokenRaw && !isExpired) {
+            return { token: TokenService.tokenRaw };
         }
-        return { token: TokenService.tokenRaw };
+
+        // Otherwise, generate a new token on demand and return it
+        try {
+            await TokenService.createApiKey(startApp.decorator.jwt);
+            return { token: TokenService.tokenRaw };
+        } catch (err: any) {
+            return status(500, { message: "Error generating token" });
+        }
     },
         {
             response: {
