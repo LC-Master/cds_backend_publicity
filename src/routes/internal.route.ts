@@ -2,6 +2,7 @@ import { CONFIG } from "@src/config/config";
 import TokenService from "@src/services/token.service";
 import { TokenRepository } from "@src/repository/token.repository";
 import { startApp } from "@src/plugin/startApp.plugin";
+import { logger } from "@src/providers/logger.provider";
 import Elysia, { t } from "elysia";
 
 export const internalRoute = new Elysia({
@@ -13,7 +14,7 @@ export const internalRoute = new Elysia({
 })
     .get("/internal/handshake", async ({ headers, status }) => {
         if (headers["x-master-key"] !== CONFIG.MASTER_KEY) {
-            return status(401, { message: "Unauthorized" });
+            return status(401, { message: "Unauthorized" }) as any;
         }
 
         // Check DB record
@@ -29,10 +30,13 @@ export const internalRoute = new Elysia({
 
         // Otherwise, generate a new token on demand and return it
         try {
+            logger.info("Internal handshake: token missing or expired, generating new token on-demand");
             await TokenService.createApiKey(startApp.decorator.jwt);
+            logger.info("Internal handshake: token generated on-demand successfully");
             return { token: TokenService.tokenRaw };
         } catch (err: any) {
-            return status(500, { message: "Error generating token" });
+            logger.error({ message: "Error generating token on-demand", error: err?.message || err });
+            return status(500, { message: "Error generating token" }) as any;
         }
     },
         {
