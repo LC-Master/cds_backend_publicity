@@ -2,7 +2,13 @@ import { CONFIG } from "@src/config/config";
 import TokenService from "@src/services/token.service";
 import Elysia, { t } from "elysia";
 
-export const internalRoute = new Elysia()
+export const internalRoute = new Elysia({
+    detail: {
+        summary: "Internal Routes",
+        description: "Endpoints para el handshake interno entre servicios.",
+        tags: ["Authentication", "Internal"],
+    }
+})
     .get("/internal/handshake", ({ headers, status }) => {
         if (headers["x-master-key"] !== CONFIG.MASTER_KEY) {
             return status(401, { message: "Unauthorized" });

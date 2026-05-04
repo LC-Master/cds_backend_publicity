@@ -8,7 +8,6 @@
  */
 import { jwt } from "../../types/jwt.type";
 import { TokenRepository } from "@src/repository/token.repository";
-import path from "path";
 import { logger } from "@src/providers/logger.provider";
 import { jwtSchema } from "@src/schemas/jwt.schema";
 
@@ -18,10 +17,6 @@ import { jwtSchema } from "@src/schemas/jwt.schema";
  */
 export default abstract class TokenService {
   public static tokenRaw: string | null = null;
-  private static readonly pathFileToken = path.join(
-    process.cwd(),
-    "token_api.txt"
-  );
   private static cachedHash: string | null = null;
   private static lastHashLoad = 0;
   private static readonly HASH_TTL_MS = 60_000;
@@ -153,34 +148,9 @@ export default abstract class TokenService {
         throw new Error("Error saving API key to database");
       }
       logger.info("API key hashed and saved to database successfully.");
-      // try {
-      //   await this.createFileToken(validated);
-      //   try {
-      //     const fs = await import("fs/promises");
-      //     await fs.chmod(this.pathFileToken, 0o600);
-      //   } catch (chmodErr) {
-      //     logger.warn(
-      //       `Unable to set file permissions for API key file: ${chmodErr}`
-      //     );
-      //   }
-      // } catch (fileErr) {
-      //   logger.error(`Failed to write API key file: ${fileErr}`);
-      // }
-
-      // logger.info(
-      //   "API key created and saved successfully. on path " + this.pathFileToken
-      // );
     } catch (err: any) {
       throw new Error(`Error creating API key: ${err.message}`);
     }
-  }
-  /**
-   * @param {string} token - Token crudo a escribir.
-   * @description Crea un archivo temporal con el token crudo en disco llamado `token_api.txt`.
-   * @returns {Promise<void>}
-   */
-  private static async createFileToken(token: string): Promise<void> {
-    await Bun.write(this.pathFileToken, token);
   }
   /**
    * Verifica si existe una API key guardada en la DB.
