@@ -4,8 +4,9 @@
  * Servicio para generar, validar y gestionar la API key (token) usada por el servicio.
  * Los métodos gestionan la creación, hashing y persistencia segura del token en la base de datos,
  * y la creación de un archivo temporal `token_api.txt` con el token crudo (solo al crear).
- * Todos los comentarios están en español y **no** se modifica la lógica.
+ * Todos los comentarios están en español.
  */
+import path from "path";
 import { jwt } from "../../types/jwt.type";
 import { TokenRepository } from "@src/repository/token.repository";
 import { logger } from "@src/providers/logger.provider";
@@ -22,7 +23,9 @@ export default abstract class TokenService {
   private static readonly HASH_TTL_MS = 60_000;
   private static readonly TOKEN_CACHE_TTL_MS = 5 * 60_000;
   private static readonly TOKEN_CACHE_MAX_ENTRIES = 2_000;
+  private static readonly ROTATE_COOLDOWN_MS = 30_000;
   private static tokenCache = new Map<string, number>();
+  private static lastRotateAttempt = 0;
 
   private static pruneTokenCache(now = Date.now()): void {
     for (const [token, validUntil] of this.tokenCache.entries()) {
@@ -84,11 +87,43 @@ export default abstract class TokenService {
       const base64 = b64.replace(/-/g, '+').replace(/_/g, '/') + (pad ? '='.repeat(4 - pad) : '');
       const json = Buffer.from(base64, 'base64').toString('utf8');
       const payload = JSON.parse(json);
-      if (payload && typeof payload.exp === 'number') return payload.exp;
+      const exp = payload?.exp;
+      if (typeof exp === 'number' && Number.isFinite(exp)) return exp;
+      if (typeof exp === 'string') {
+        const parsed = Number(exp);
+        if (Number.isFinite(parsed)) return parsed;
+      }
       return null;
     } catch {
       return null;
     }
+  }
+
+  private static isExpired(expiresAt: Date | null | undefined, now = Date.now()): boolean {
+    if (!expiresAt) return false;
+    return expiresAt.getTime() <= now;
+  }
+
+  public static async ensureApiKey(jwt: jwt): Promise<string> {
+    const apiKey = await TokenRepository.getFull();
+    const expiresAt = apiKey?.expiresAt ? new Date(apiKey.expiresAt) : null;
+    const expired = !apiKey || this.isExpired(expiresAt);
+
+    if (this.tokenRaw && !expired) {
+      return this.tokenRaw;
+    }
+
+    if (!expired && apiKey && !this.tokenRaw) {
+      logger.warn("API key exists but raw token is not in memory; rotating token to recover");
+    } else if (expired) {
+      logger.info("API key missing or expired; rotating token");
+    }
+
+    await this.createApiKey(jwt);
+    if (!this.tokenRaw) {
+      throw new Error("Token generation failed");
+    }
+    return this.tokenRaw;
   }
 
   /**
@@ -96,19 +131,26 @@ export default abstract class TokenService {
    */
   public static async verifyBearer(rawToken: string, jwtInstance: jwt): Promise<boolean> {
     this.pruneTokenCache();
+    const now = Date.now();
 
     const validatedRaw = await this.validateToken(rawToken);
     if (!validatedRaw) return false;
 
+    const exp = this.extractExpFromJwt(rawToken);
+    const expMs = exp !== null ? exp * 1000 : null;
     try {
       const verified = await jwtInstance.verify(rawToken);
       if (!verified) return false;
     } catch {
+      const rotated = await this.rotateIfStoredAndExpired(rawToken, validatedRaw, expMs, jwtInstance, now);
+      if (rotated) {
+        return false;
+      }
       return false;
     }
 
     const cachedValidUntil = this.tokenCache.get(rawToken);
-    if (cachedValidUntil && cachedValidUntil > Date.now()) {
+    if (cachedValidUntil && cachedValidUntil > now && (expMs === null || expMs > now)) {
       return true;
     }
 
@@ -117,10 +159,45 @@ export default abstract class TokenService {
 
     const ok = await Bun.password.verify(validatedRaw, hashed);
     if (ok) {
-      this.tokenCache.set(rawToken, Date.now() + this.TOKEN_CACHE_TTL_MS);
+      const cacheUntil = expMs !== null ? Math.min(now + this.TOKEN_CACHE_TTL_MS, expMs) : now + this.TOKEN_CACHE_TTL_MS;
+      if (cacheUntil > now) {
+        this.tokenCache.set(rawToken, cacheUntil);
+      }
       this.pruneTokenCache();
     }
     return ok;
+  }
+
+  private static async rotateIfStoredAndExpired(
+    rawToken: string,
+    validatedRaw: string,
+    expMs: number | null,
+    jwtInstance: jwt,
+    now = Date.now()
+  ): Promise<boolean> {
+    const hashed = await this.getHashedToken();
+    if (!hashed) return false;
+
+    const matchesStored = await Bun.password.verify(validatedRaw, hashed);
+    if (!matchesStored) return false;
+
+    const expired = expMs !== null && expMs <= now;
+    if (!expired && expMs !== null) {
+      logger.warn("JWT verification failed for stored token; rotating to recover");
+    }
+
+    if (now - this.lastRotateAttempt < this.ROTATE_COOLDOWN_MS) {
+      return false;
+    }
+
+    this.lastRotateAttempt = now;
+    try {
+      await this.createApiKey(jwtInstance);
+      return true;
+    } catch (err: any) {
+      logger.error({ message: "Token rotation failed", error: err?.message || err });
+      return false;
+    }
   }
   /**
    * @description Hashea un token usando Argon2id con parámetros de seguridad.
@@ -157,17 +234,24 @@ export default abstract class TokenService {
       }
 
       this.tokenRaw = token;
+      const tokenFilePath = path.join(process.cwd(), "token_api.txt");
+      const tokenFile = Bun.file(tokenFilePath);
+      if (!await tokenFile.exists()) {
+        await Bun.write(tokenFilePath, token);
+      }
       const hashedToken = await this.hashToken(validated);
 
-      // extract exp from JWT payload; if not present, default to 24h
       const exp = this.extractExpFromJwt(token);
-      const expiresAt = exp ? new Date(exp * 1000) : new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const expiresAt = exp !== null ? new Date(exp * 1000) : null;
 
       const savedToken = await TokenRepository.save(hashedToken, expiresAt);
 
       if (!savedToken || !savedToken.key) {
         throw new Error("Error saving API key to database");
       }
+      this.cachedHash = hashedToken;
+      this.lastHashLoad = Date.now();
+      this.tokenCache.clear();
       logger.info("API key hashed and saved to database successfully.");
     } catch (err: any) {
       throw new Error(`Error creating API key: ${err.message}`);

@@ -21,7 +21,7 @@ export const startApp = new Elysia().use(authPlugin).onStart(async function () {
       logger.fatal("cannot connect to database, exiting...");
       process.exit(1);
     }
-    await TokenService.createApiKey(startApp.decorator.jwt);
+    await TokenService.ensureApiKey(startApp.decorator.jwt);
     await StorageService.createLogDirIfNotExists();
 
     await StorageService.cleanTempFolder();
