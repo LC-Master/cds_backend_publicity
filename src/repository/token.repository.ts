@@ -40,4 +40,13 @@ export abstract class TokenRepository {
       throw new Error(`Error saving API key to database: ${err.message}`);
     }
   }
+
+  /**
+   * Obtiene la fecha de expiración almacenada para la API key (si existe).
+   * @returns {Promise<Date|null>} Fecha de expiración o null si no existe.
+   */
+  public static async getExpiry(): Promise<Date | null> {
+    const token = await prisma.apiKey.findUnique({ where: { id: 1 } });
+    return token?.expiresAt || null;
+  }
 }

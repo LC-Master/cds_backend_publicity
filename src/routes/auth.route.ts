@@ -30,8 +30,19 @@ export const authRoute = new Elysia({
   .use(authPlugin)
   .get(
     "/auth/login/device",
-    async ({ status, cookie: { auth } }) => {
+    async ({ status, cookie: { auth }, jwt }) => {
       try {
+        // Ensure API key exists and is not expired; if missing or expired, regenerate.
+        try {
+          const expiry = await (await import("@src/repository/token.repository")).TokenRepository.getExpiry();
+          const now = new Date();
+          if (!expiry || expiry <= now) {
+            await (await import("@src/services/token.service")).default.createApiKey(jwt);
+          }
+        } catch (err) {
+          // non-fatal: if DB check fails, still proceed to issue SSE token
+          logger.warn({ message: "Could not verify API key expiry before device login", error: (err as Error).message });
+        }
         const token = await SseTokenService.generate();
         auth.set({
           httpOnly: true,
