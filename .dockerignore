@@ -1,5 +1,10 @@
-node_modules
+node_modules/
+Playlist/
 dist
 .vscode
 .git
 .env
+docker/
+.env.example
+.github/
+.vscode/

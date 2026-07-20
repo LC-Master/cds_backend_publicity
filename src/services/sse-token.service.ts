@@ -25,8 +25,7 @@ export abstract class SseTokenService {
         logger.warn(".env file not found. Creating a new one...");
         await Bun.write(envPath, `PASETO_PRIVATE_KEY=${secretKey}\nPASETO_PUBLIC_KEY=${publicKey}\n`);
         logger.info("✅ Keys generated and saved to environment.");
-        logger.info("🛑 Restarting server to inject variables...");
-        process.exit(1);
+        process.exit(0);
       }
 
       const existingEnv = await env.text();
@@ -41,9 +40,8 @@ export abstract class SseTokenService {
       await Bun.write(envPath, existingEnv.trim() + `\nPASETO_PRIVATE_KEY=${secretKey}\nPASETO_PUBLIC_KEY=${publicKey}\n`);
 
       logger.info("✅ Keys generated and saved to environment.");
-      logger.info("🛑 Restarting server to inject variables...");
 
-      process.exit(1);
+      process.exit(0);
     }
     logger.info("Identity loaded. System ready.");
   }
