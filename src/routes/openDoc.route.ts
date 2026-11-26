@@ -4,6 +4,7 @@ import Elysia, { t } from "elysia";
 
 export const apiDoc = new Elysia().use(
   openapi({
+    enabled: process.env.NODE_ENV !== "production",
     documentation: {
       components: {
         securitySchemes: {
@@ -24,9 +25,6 @@ export const apiDoc = new Elysia().use(
           },
         },
       },
-      // Requiere autenticación por defecto (Bearer JWT). Excepciones:
-      // - /auth/login/device es pública y devuelve un UUID (device token) que deberá pasarse
-      //   en posteriores llamadas a rutas de Events como query param 'token' en lugar del header Bearer.
       security: [{ BearerAuth: [] }],
       tags: [
         {

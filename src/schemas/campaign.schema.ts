@@ -24,7 +24,7 @@ export const campaign = z.object({
     .date()
     .describe("End date of the campaign"),
   slots: z.object({
-    am: mediaSlot,
-    pm: mediaSlot,
+    am: mediaSlot.nullable().optional(),
+    pm: mediaSlot.nullable().optional(),
   }),
 })

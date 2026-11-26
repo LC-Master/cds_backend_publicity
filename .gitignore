@@ -1,5 +1,5 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
+.buildx-cache/
 # dependencies
 /node_modules
 /.pnp
@@ -36,7 +36,7 @@ yarn-error.log*
 api-key.txt
 # vercel
 .vercel
-
+http/
 **/*.trace
 **/*.zip
 **/*.tar.gz

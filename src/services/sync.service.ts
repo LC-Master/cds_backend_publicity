@@ -21,6 +21,7 @@ import { MediaService } from "./media.service";
 import { parseSchema } from "@src/lib/parseSchema";
 import { HealthService } from "./health.service";
 import { healthEnum } from "@src/enums/health.enum";
+import { cmsApiUrl } from "@src/lib/cms-url";
 
 /**
  * @class SyncService
@@ -31,6 +32,10 @@ import { healthEnum } from "@src/enums/health.enum";
  * aunque la versión del DTO no haya cambiado.
  */
 export abstract class SyncService {
+  private static normalizeMediaId(id: string): string {
+    return id.trim().toLowerCase();
+  }
+
   /**
    * @author Francisco A. Rojas F.
    * @description
@@ -230,14 +235,14 @@ export abstract class SyncService {
    * Ejecuta la sincronización completa: descarga DTO, verifica cambios, descarga archivos y guarda versión.
    * @returns {Promise<ISnapshotDto | null>} Resultado de la sincronización o null si no procede.
    */
-  public static async syncData(): Promise<ISnapshotDto | null> {
+  public static async syncData(recoveryMediaIds: string[] = []): Promise<ISnapshotDto | null> {
     const start_at = new Date();
     logger.info({
       message: "Sync process started",
       time: start_at.toLocaleString(),
     });
     this.reportHealth(healthEnum.SYNCING, start_at, null);
-    const data = await fetchAuth<ISnapshotDto>(CONFIG.CMS_ROUTE_SNAPSHOT);
+    const data = await fetchAuth<ISnapshotDto>(cmsApiUrl("store/snapshot"));
     if (!data) {
       logger.warn("Failed to fetch DTO from CMS.");
       this.reportHealth(healthEnum.FAILED, start_at, new Date(), 'Failed to fetch DTO from CMS');
@@ -249,9 +254,19 @@ export abstract class SyncService {
       logger.info("Sync already in progress. Aborting new sync attempt.");
       return null;
     }
+    const recoveryScope = new Set(
+      recoveryMediaIds.map((id) => this.normalizeMediaId(id))
+    );
+    const hasRecoveryScope = recoveryScope.size > 0;
+
     let forcedMissingIds: string[] = [];
     if (!canSync.canSync && canSync.type === typeSyncEnum.noChange) {
       forcedMissingIds = await MediaService.checkPhysicalMedia(dto);
+      if (hasRecoveryScope) {
+        forcedMissingIds = forcedMissingIds.filter((id) =>
+          recoveryScope.has(this.normalizeMediaId(id))
+        );
+      }
       if (forcedMissingIds.length === 0) {
         logger.info("No changes detected in DTO version. Sync not required.");
         this.reportHealth(healthEnum.SUCCESS, start_at, new Date());
@@ -264,18 +279,36 @@ export abstract class SyncService {
 
     try {
       const mediaList = extractMediaList(dto);
+      const scopedMediaList = hasRecoveryScope
+        ? mediaList.filter((media) =>
+          recoveryScope.has(this.normalizeMediaId(media.id))
+        )
+        : mediaList;
 
-      if (!mediaList || mediaList.length === 0) {
+      if (!scopedMediaList || scopedMediaList.length === 0) {
+        if (hasRecoveryScope) {
+          logger.warn({
+            message:
+              "Recovery sync requested for media not present in current DTO. Skipping partial download.",
+            requestedCount: recoveryScope.size,
+          });
+          await PlaylistDataRepository.saveVersion(dto);
+          await this.finishSync(dto.meta.version);
+          this.reportHealth(healthEnum.SUCCESS, start_at, new Date());
+          return dto;
+        }
+
         throw new Error("DTO contains no media entries to process.");
       }
 
       logger.info({
         message: "Found media entries in DTO to verify",
-        media: mediaList.length,
+        media: scopedMediaList.length,
+        partialRecovery: hasRecoveryScope,
       });
 
       const syncedFiles = await MediaService.getMissingFiles(
-        mediaList,
+        scopedMediaList,
         forcedMissingIds
       );
 
@@ -314,6 +347,9 @@ export abstract class SyncService {
       return null;
     } finally {
       await StorageService.cleanTempFolder();
+      try {
+        Bun.gc(true);
+      } catch { }
     }
   }
   public static reportHealth(status: healthEnum, start_at: Date | null, end_at: Date | null, errorMessage?: string): void {

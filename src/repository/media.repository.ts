@@ -107,7 +107,7 @@ export abstract class MediaRepository {
       where: {
         isDownloaded: true,
       },
-      select: { id: true },
+      select: { id: true, localPath: true },
     });
   }
   /**

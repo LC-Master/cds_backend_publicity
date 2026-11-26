@@ -6,6 +6,9 @@ import { logger } from "../providers/logger.provider";
 import { SseTokenService } from "@src/services/sse-token.service";
 import { Unauthorized } from "@src/schemas/Unauthorized.schema";
 
+// Permitir más de 10 conexiones SSE simultáneas sin warnings.
+syncEventInstance.setMaxListeners(0);
+
 /**
  * @author Francisco A. Rojas F.
  * @module Events Route
@@ -23,41 +26,61 @@ import { Unauthorized } from "@src/schemas/Unauthorized.schema";
  */
 export const eventsRoute = new Elysia().get(
   "/events",
-  ({ status, cookie: { auth } }) => {
-
-    if (!auth || !SseTokenService.validate(auth.value)) {
+  async ({ status, cookie: { auth }, request }) => {
+    if (!auth || !(await SseTokenService.validate(auth.value))) {
       throw status(401, { error: "Invalido o faltante SSE token" });
     }
 
-    let cleanup: () => void;
+    let cleaned = false;
+    let cleanup = () => {};
+    let abortHandler: (() => void) | null = null;
+    let pingTimeout: Timer | null = null;
     try {
       const stream = new ReadableStream({
         start(controller) {
-          sse({
-            data: { message: "ping" },
-            event: "ping",
-            controller,
-          });
-          const interval = setInterval(() => {
-            sse({
-              data: { message: "ping" },
-              event: "ping",
-              controller,
-            });
-          }, ms("22s"));
+          const safeSend = ({ event, data }: { event?: string; data: object }) => {
+            if (cleaned) return false;
+            try {
+              sse({
+                data,
+                event,
+                controller,
+              });
+              return true;
+            } catch (err) {
+              logger.warn({
+                message: "SSE send failed, cleaning connection",
+                error: (err as Error).message,
+              });
+              cleanup();
+              return false;
+            }
+          };
+
+          if (!safeSend({ event: "ping", data: { message: "ping" } })) {
+            return;
+          }
+
+          const schedulePing = () => {
+            pingTimeout = setTimeout(() => {
+              if (!safeSend({ event: "ping", data: { message: "ping" } })) {
+                return;
+              }
+              schedulePing();
+            }, ms("22s"));
+          };
+          schedulePing();
 
           const onDtoUpdated = () => {
-            sse({
+            safeSend({
               event: "dto:updated",
-              controller,
               data: { message: "Nuevo DTO sincronizado" },
             });
           };
 
           const onPlaylistGenerated = () => {
-            sse({
+            safeSend({
               event: "playlist:generated",
-              controller,
               data: { message: "Nueva playlist generada" },
             });
           };
@@ -66,10 +89,18 @@ export const eventsRoute = new Elysia().get(
           syncEventInstance.on("playlist:generated", onPlaylistGenerated);
 
           cleanup = () => {
+            if (cleaned) return;
+            cleaned = true;
+            if (pingTimeout) clearTimeout(pingTimeout);
             syncEventInstance.off("dto:updated", onDtoUpdated);
             syncEventInstance.off("playlist:generated", onPlaylistGenerated);
-            clearInterval(interval);
+            if (abortHandler) {
+              request.signal.removeEventListener("abort", abortHandler);
+            }
           };
+
+          abortHandler = () => cleanup();
+          request.signal.addEventListener("abort", abortHandler, { once: true });
         },
         cancel() {
           logger.info("Client disconnected from SSE");

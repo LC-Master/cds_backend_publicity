@@ -36,7 +36,7 @@ describe("StorageService", () => {
   test("downloadAndVerifyFiles stores valid file", async () => {
     await ensureDirs();
 
-    Bun.env.CMS_MEDIA_BASE_URL = "https://example.com";
+    Bun.env.CMS_BASE_URL = "https://example.com";
     Bun.env.API_KEY_CMS = "token";
     const originalFetch = globalThis.fetch ;
     globalThis.fetch = mock(async () =>

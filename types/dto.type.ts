@@ -1,42 +1,13 @@
-import { IFile } from "./file.type";
+import { z } from "zod";
+import { dto } from "../src/schemas/dto.schema";
+import { campaign } from "../src/schemas/campaign.schema";
+import { mediaSchema } from "../src/schemas/media.schema";
 
-export interface ISnapshotDto {
-  meta: Meta;
-  data: Data;
-}
+export type ISnapshotDto = z.infer<typeof dto>;
+export type Campaign = z.infer<typeof campaign>;
+export type Slots = z.infer<typeof campaign>["slots"];
+export type FileDto = z.infer<typeof mediaSchema>;
+export type Meta = z.infer<typeof dto>["meta"];
+export type Data = z.infer<typeof dto>["data"];
 
-export interface Meta {
-  api_version?: string;
-  version: string;
-  generated_at: Date;
-}
-
-export interface Data {
-  store_id: number;
-  place_holder?: IFile;
-  campaigns: Campaign[];
-}
-
-export interface Campaign {
-  id: string;
-  title: string;
-  department: string;
-  agreements?: string[];
-  start_at: Date;
-  end_at: Date;
-  slots: Slots;
-}
-
-export interface Slots {
-  am: FileDto[];
-  pm: FileDto[];
-}
-
-export interface FileDto {
-  id: string;
-  name: string;
-  duration_seconds: number;
-  checksum: string;
-  position: number;
-}
 

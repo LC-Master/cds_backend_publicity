@@ -23,6 +23,13 @@ export const configSchema = z.object({
     .min(32, "PASETO_PUBLIC_KEY debe tener al menos 32 caracteres")
     .describe("Clave pública para verificar tokens PASETO")
     .default(""),
+  MASTER_KEY: z
+    .string({
+      error: "MASTER_KEY es obligatorio y tiene que ser una cadena de texto",
+    })
+    .min(16, "MASTER_KEY debe tener al menos 16 caracteres")
+    .describe("Clave maestra para autenticación interna")
+    .default(""),
   MEDIA_PATH: z
     .string({
       error: "MEDIA_PATH es obligatorio y tiene que ser una cadena de texto",
@@ -79,19 +86,7 @@ export const configSchema = z.object({
 
   CMS_BASE_URL: z
     .url({ error: "CMS_BASE_URL debe ser una URL válida" })
-    .describe("URL base del CMS"),
-
-  CMS_MEDIA_BASE_URL: z
-    .url({
-      error: "CMS_MEDIA_BASE_URL debe ser una URL válida",
-    })
-    .describe("URL base para descargar medios del CMS"),
-
-  CMS_ROUTE_SNAPSHOT: z
-    .url({
-      error: "CMS_ROUTE_SNAPSHOT debe ser una URL válida",
-    })
-    .describe("URL para la instantánea de rutas del CMS"),
+    .describe("URL base del CMS (ej: http://localhost)"),
 
   PORT: z.coerce
     .number()
@@ -166,7 +161,7 @@ export const configSchema = z.object({
     .min(1, "DOWNLOAD_CONCURRENCY debe ser al menos 1")
     .max(100, "DOWNLOAD_CONCURRENCY no debe superar 100")
     .describe("Número de descargas concurrentes permitidas")
-    .default(10),
+    .default(3),
 
   FETCH_TIMEOUT_SECONDS: z.coerce
     .number()

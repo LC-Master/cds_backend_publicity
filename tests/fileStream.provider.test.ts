@@ -11,7 +11,7 @@ mock.module("../src/providers/logger.provider", () => ({
 
 describe("fileStreamProvider", () => {
   test("throws on non-ok response", async () => {
-    Bun.env.CMS_MEDIA_BASE_URL = "https://example.com";
+    Bun.env.CMS_BASE_URL = "https://example.com";
     Bun.env.API_KEY_CMS = "token";
 
     const originalFetch = globalThis.fetch;
@@ -26,7 +26,7 @@ describe("fileStreamProvider", () => {
   });
 
   test("throws when content-type is text/html", async () => {
-    Bun.env.CMS_MEDIA_BASE_URL = "https://example.com";
+    Bun.env.CMS_BASE_URL = "https://example.com";
     Bun.env.API_KEY_CMS = "token";
 
     const originalFetch = globalThis.fetch;

@@ -1,31 +1,38 @@
 import path from "path";
 import pino from "pino";
 import fs from "fs";
-import pretty from "pino-pretty"; 
+import pretty from "pino-pretty";
 
 const logDir = path.join(process.cwd(), "logs");
+const isProd = process.env.NODE_ENV === "production";
 
-if (!fs.existsSync(logDir)) {
+if (!isProd && !fs.existsSync(logDir)) {
   fs.mkdirSync(logDir, { recursive: true });
 }
 
-export const logger = pino(
-  {
-    level: "info",
-    timestamp: () => `,"time":"${new Date().toISOString()}"`,
-  },
-  pino.multistream([
-    {
-      level: "info",
-      stream: pretty({ colorize: true }), // Consola
-    },
-    {
-      level: "info",
-      stream: pretty({
-        colorize: false,
-        destination: path.join(logDir, "app.log"),
-        sync: true, // Escribe inmediatamente al archivo
-      }),
-    },
-  ])
-);
+const baseOptions = {
+  level: "info",
+  timestamp: () => `,"time":"${new Date().toISOString()}"`,
+};
+
+// En producción solo stdout sin pretty para que winsw lo capture.
+// En desarrollo mantiene pretty y archivo local.
+export const logger = isProd
+  ? pino(baseOptions, pino.destination({ sync: false }))
+  : pino(
+      baseOptions,
+      pino.multistream([
+        {
+          level: "info",
+          stream: pretty({ colorize: true }),
+        },
+        {
+          level: "info",
+          stream: pretty({
+            colorize: false,
+            destination: path.join(logDir, "app.log"),
+            sync: true,
+          }),
+        },
+      ])
+    );

@@ -1,21 +1,6 @@
-export interface IPlaylistItem {
-  id: string;
-  fileType: string;
-  start_at: Date | string;
-  end_at: Date | string;
-  position: number;
-}
+import { z } from "zod";
+import { playlistItemSchema, playlistCampaignSchema, playlistDataSchema } from "../src/schemas/playlist.schema";
 
-export interface IPlaylistCampaign {
-  id: string;
-  am: IPlaylistItem[];
-  pm: IPlaylistItem[];
-}
-
-export interface IPlaylistData {
-  campaigns: IPlaylistCampaign[];
-  place_holder: {
-    id: string;
-    fileType: string;
-  } | null;
-}
+export type IPlaylistItem = z.infer<typeof playlistItemSchema>;
+export type IPlaylistCampaign = z.infer<typeof playlistCampaignSchema>;
+export type IPlaylistData = z.infer<typeof playlistDataSchema>;

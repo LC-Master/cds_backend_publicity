@@ -5,6 +5,7 @@
  */
 import { Elysia } from "elysia";
 import { syncCrons } from "@crons/sync.crons";
+import { tokenCrons } from "@crons/token.crons";
 import { healthRoute } from "@routes/health.route";
 import { logMiddleware } from "@middlewares/log.middleware";
 import cors from "@elysiajs/cors";
@@ -20,18 +21,23 @@ import { apiDoc } from "./routes/openDoc.route";
 import { authMiddleware } from "./middlewares/auth.middleware";
 import { startApp } from "./plugin/startApp.plugin";
 import { authRoute } from "./routes/auth.route";
+import { internalRoute } from "./routes/internal.route";
 
-export const app = new Elysia({ prefix: "/api" })
+export const app = new Elysia({
+  prefix: "/api"
+})
   .use(apiDoc)
   .use(startApp)
   .use(mediaRoute)
   .use(
     cors({
       origin: CONFIG.SERVER_NEXT_PUBLIC_PRICE_CHECKER_URL,
+      credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     })
   )
   .use(logMiddleware)
+  .use(internalRoute)
   .use(forceRoute)
   .use(authPlugin)
   .use(healthRoute)
@@ -40,6 +46,7 @@ export const app = new Elysia({ prefix: "/api" })
   .use(authRoute)
   .use(playlistRoute)
   .use(syncCrons)
+  .use(tokenCrons)
   .onError(({ code, status }) => {
     if (code === "NOT_FOUND")
       return status(404, {

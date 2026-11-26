@@ -3,17 +3,15 @@ import { logger } from "../src/providers/logger.provider";
 try {
     await Bun.build({
         entrypoints: ["src/index.ts"],
-        compile: {
-            outfile: 'dist/cds.exe',
-            windows: {
-                icon: 'assets/locatel.ico',
-                version: '1.0.0',
-                copyright: '© 2026 Locatel',
-                title: 'CDS Backend Service',
-                publisher: 'Locatel',
-                description: 'Servicio Backend de CDS',
-            }
+        target: "bun",
+        minify: {
+            whitespace: true,
+            syntax: true,
+            identifiers: false,
         },
+        sourcemap: "none",
+        outdir: "./dist",
+        naming: "server.ts"
     })
 
 } catch (error) {
