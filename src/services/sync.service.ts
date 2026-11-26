@@ -281,8 +281,8 @@ export abstract class SyncService {
       const mediaList = extractMediaList(dto);
       const scopedMediaList = hasRecoveryScope
         ? mediaList.filter((media) =>
-            recoveryScope.has(this.normalizeMediaId(media.id))
-          )
+          recoveryScope.has(this.normalizeMediaId(media.id))
+        )
         : mediaList;
 
       if (!scopedMediaList || scopedMediaList.length === 0) {
@@ -349,7 +349,7 @@ export abstract class SyncService {
       await StorageService.cleanTempFolder();
       try {
         Bun.gc(true);
-      } catch {}
+      } catch { }
     }
   }
   public static reportHealth(status: healthEnum, start_at: Date | null, end_at: Date | null, errorMessage?: string): void {

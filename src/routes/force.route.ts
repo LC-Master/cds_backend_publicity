@@ -39,6 +39,7 @@ export const forceRoute = new Elysia({
 
       const payload = await V4.verify(bearer, publicKeyBuffer, {
         complete: true,
+        clockTolerance: "5m"
       });
       if (!payload) {
         throw status(401, { error: "Unauthorized" });
